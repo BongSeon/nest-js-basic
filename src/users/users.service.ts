@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
+import * as bcrypt from 'bcrypt'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { User } from './entities/user.entity'
@@ -13,7 +18,25 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.usersRepository.create(createUserDto)
+    // 중복 사용자 확인
+    const existingUser = await this.usersRepository.findOne({
+      where: [
+        { username: createUserDto.username },
+        { email: createUserDto.email },
+      ],
+    })
+
+    if (existingUser) {
+      throw new ConflictException('Username or email already exists')
+    }
+
+    // 비밀번호 해싱
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10)
+
+    const user = this.usersRepository.create({
+      ...createUserDto,
+      password: hashedPassword,
+    })
     return await this.usersRepository.save(user)
   }
 
@@ -31,6 +54,12 @@ export class UsersService {
 
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id)
+
+    // 비밀번호가 제공된 경우 해싱
+    if (updateUserDto.password) {
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10)
+    }
+
     Object.assign(user, updateUserDto)
     return await this.usersRepository.save(user)
   }
