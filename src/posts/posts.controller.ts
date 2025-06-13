@@ -18,30 +18,30 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  create(@Body() createPostDto: CreatePostDto): PostEntity {
-    return this.postsService.create(createPostDto)
+  async create(@Body() createPostDto: CreatePostDto): Promise<PostEntity> {
+    return await this.postsService.create(createPostDto)
   }
 
   @Get()
-  findAll(): PostEntity[] {
-    return this.postsService.findAll()
+  async findAll(): Promise<PostEntity[]> {
+    return await this.postsService.findAll()
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number): PostEntity {
-    return this.postsService.findOne(id)
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<PostEntity> {
+    return await this.postsService.findOne(id)
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePostDto: UpdatePostDto
-  ): PostEntity {
-    return this.postsService.update(id, updatePostDto)
+  ): Promise<PostEntity> {
+    return await this.postsService.update(id, updatePostDto)
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number): void {
-    this.postsService.remove(id)
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    await this.postsService.remove(id)
   }
 }
