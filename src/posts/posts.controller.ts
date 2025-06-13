@@ -11,24 +11,23 @@ import {
 import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
-import { Post as PostEntity } from './entities/post.entity'
 
 @Controller('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  async create(@Body() createPostDto: CreatePostDto): Promise<PostEntity> {
+  async create(@Body() createPostDto: CreatePostDto): Promise<any> {
     return await this.postsService.create(createPostDto)
   }
 
   @Get()
-  async findAll(): Promise<PostEntity[]> {
+  async findAll(): Promise<any[]> {
     return await this.postsService.findAll()
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<PostEntity> {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<any> {
     return await this.postsService.findOne(id)
   }
 
@@ -36,7 +35,7 @@ export class PostsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePostDto: UpdatePostDto
-  ): Promise<PostEntity> {
+  ): Promise<any> {
     return await this.postsService.update(id, updatePostDto)
   }
 

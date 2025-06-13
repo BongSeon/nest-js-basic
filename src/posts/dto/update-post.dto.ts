@@ -1,4 +1,10 @@
-import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator'
+import {
+  IsString,
+  IsOptional,
+  MinLength,
+  MaxLength,
+  IsNumber,
+} from 'class-validator'
 
 export class UpdatePostDto {
   @IsString()
@@ -12,4 +18,8 @@ export class UpdatePostDto {
   @MinLength(10)
   @MaxLength(1000)
   content?: string
+
+  @IsNumber()
+  @IsOptional()
+  userId?: number
 }
