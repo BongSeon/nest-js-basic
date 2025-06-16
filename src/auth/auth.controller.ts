@@ -1,7 +1,8 @@
-import { Controller, Post, Body } from '@nestjs/common'
+import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common'
+import { Request } from 'express'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
-import { LoginDto } from './dto/login.dto'
+import { BasicAuthGuard } from './guards/basic-auth.guard'
 
 @Controller('auth')
 export class AuthController {
@@ -13,7 +14,9 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return await this.authService.loginWithUsername(loginDto)
+  @UseGuards(BasicAuthGuard)
+  async login(@Req() request: Request) {
+    const { username, password } = request['credentials']
+    return await this.authService.loginWithUsername({ username, password })
   }
 }
