@@ -127,4 +127,30 @@ export class AuthService {
     // 3) 이상이 없다면 사용자 정보를 반환
     return user
   }
+
+  /**
+   * 6. getUserFromToken
+   *  - JWT 토큰으로부터 사용자 정보를 추출하고 DB에서 해당 사용자를 찾아 반환
+   */
+  async getUserFromToken(token: string): Promise<User> {
+    try {
+      // 토큰 검증
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_ACCESS_SECRET || 'access-secret',
+      })
+
+      // DB에서 사용자 찾기
+      const user = await this.usersRepository.findOne({
+        where: { id: payload.sub },
+      })
+
+      if (!user) {
+        throw new UnauthorizedException('User not found')
+      }
+
+      return user
+    } catch {
+      throw new UnauthorizedException('Invalid token')
+    }
+  }
 }
