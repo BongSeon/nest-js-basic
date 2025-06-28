@@ -28,6 +28,15 @@ export class PostsService {
     }
   }
 
+  private formatPostResponse(post: Post) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId, ...postWithoutUserId } = post
+    return {
+      ...postWithoutUserId,
+      user: this.filterUserInfo(post.user),
+    }
+  }
+
   async create(createPostDto: CreatePostDto): Promise<any> {
     // 사용자 존재 여부 확인
     const user = await this.usersRepository.findOne({
@@ -42,11 +51,8 @@ export class PostsService {
     const post = this.postsRepository.create(createPostDto)
     const savedPost = await this.postsRepository.save(post)
 
-    // User 정보를 필터링하여 반환
-    return {
-      ...savedPost,
-      user: this.filterUserInfo(user),
-    }
+    // User 정보를 포함하여 반환하되 userId는 제외
+    return this.formatPostResponse(savedPost)
   }
 
   async findAll(): Promise<any[]> {
@@ -54,11 +60,8 @@ export class PostsService {
       relations: ['user'],
     })
 
-    // 각 Post의 User 정보를 필터링
-    return posts.map((post) => ({
-      ...post,
-      user: this.filterUserInfo(post.user),
-    }))
+    // 각 Post의 User 정보를 필터링하고 userId 제거
+    return posts.map((post) => this.formatPostResponse(post))
   }
 
   async findOne(id: number): Promise<any> {
@@ -70,11 +73,8 @@ export class PostsService {
       throw new NotFoundException(`Post with ID ${id} not found`)
     }
 
-    // User 정보를 필터링하여 반환
-    return {
-      ...post,
-      user: this.filterUserInfo(post.user),
-    }
+    // User 정보를 필터링하고 userId 제거하여 반환
+    return this.formatPostResponse(post)
   }
 
   async update(id: number, updatePostDto: UpdatePostDto): Promise<any> {
@@ -101,11 +101,8 @@ export class PostsService {
     Object.assign(post, updatePostDto)
     const updatedPost = await this.postsRepository.save(post)
 
-    // User 정보를 필터링하여 반환
-    return {
-      ...updatedPost,
-      user: this.filterUserInfo(updatedPost.user),
-    }
+    // User 정보를 필터링하고 userId 제거하여 반환
+    return this.formatPostResponse(updatedPost)
   }
 
   async remove(id: number): Promise<void> {
