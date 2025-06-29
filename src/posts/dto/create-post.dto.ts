@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsNotEmpty,
-  MinLength,
-  MaxLength,
-  IsNumber,
-} from 'class-validator'
+import { IsString, IsNotEmpty, MinLength, MaxLength } from 'class-validator'
 
 export class CreatePostDto {
   @IsString()
@@ -18,8 +12,4 @@ export class CreatePostDto {
   @MinLength(10)
   @MaxLength(1000)
   content: string
-
-  @IsNumber()
-  @IsNotEmpty()
-  userId: number
 }

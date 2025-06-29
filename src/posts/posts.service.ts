@@ -37,18 +37,19 @@ export class PostsService {
     }
   }
 
-  async create(createPostDto: CreatePostDto): Promise<any> {
+  async create(createPostDto: CreatePostDto, userId: number): Promise<any> {
     // 사용자 존재 여부 확인
     const user = await this.usersRepository.findOne({
-      where: { id: createPostDto.userId },
+      where: { id: userId },
     })
     if (!user) {
-      throw new BadRequestException(
-        `User with ID ${createPostDto.userId} not found`
-      )
+      throw new BadRequestException(`User with ID ${userId} not found`)
     }
 
-    const post = this.postsRepository.create(createPostDto)
+    const post = this.postsRepository.create({
+      ...createPostDto,
+      userId: userId,
+    })
     const savedPost = await this.postsRepository.save(post)
 
     // User 정보를 포함하여 반환하되 userId는 제외
