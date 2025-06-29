@@ -6,6 +6,7 @@ import { PostsService } from './posts.service'
 import { Post } from './entities/post.entity'
 import { User } from '../users/entities/user.entity'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { TokenBlacklistService } from '../auth/services/token-blacklist.service'
 
 @Module({
   imports: [
@@ -16,6 +17,6 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
     }),
   ],
   controllers: [PostsController],
-  providers: [PostsService, JwtAuthGuard],
+  providers: [PostsService, JwtAuthGuard, TokenBlacklistService],
 })
 export class PostsModule {}

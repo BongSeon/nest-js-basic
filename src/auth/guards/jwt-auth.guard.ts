@@ -7,10 +7,14 @@ import {
 import { JwtService } from '@nestjs/jwt'
 import { Request } from 'express'
 import { JwtPayload } from '../types/jwt-payload.interface'
+import { TokenBlacklistService } from '../services/token-blacklist.service'
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private tokenBlacklistService: TokenBlacklistService
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest()
@@ -18,6 +22,11 @@ export class JwtAuthGuard implements CanActivate {
 
     if (!token) {
       throw new UnauthorizedException('Token not found in Authorization header')
+    }
+
+    // 블랙리스트 확인
+    if (this.tokenBlacklistService.isBlacklisted(token)) {
+      throw new UnauthorizedException('Token has been revoked')
     }
 
     try {

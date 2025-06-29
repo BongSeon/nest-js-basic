@@ -28,6 +28,23 @@ export class AuthController {
     return await this.authService.loginWithUsername({ username, password })
   }
 
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@Req() request: Request) {
+    // Authorization 헤더에서 Bearer 토큰 추출
+    const authHeader = request.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException(
+        'Bearer token not found in Authorization header'
+      )
+    }
+
+    const token = authHeader.substring(7) // 'Bearer ' 제거
+
+    // 토큰을 블랙리스트에 추가하여 로그아웃 처리
+    return await this.authService.logout(token)
+  }
+
   @Post('hello')
   @UseGuards(JwtAuthGuard)
   async hello(@Req() request: Request) {

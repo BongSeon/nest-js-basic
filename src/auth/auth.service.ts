@@ -10,13 +10,15 @@ import * as bcrypt from 'bcrypt'
 import { User } from '../users/entities/user.entity'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
+import { TokenBlacklistService } from './services/token-blacklist.service'
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    private jwtService: JwtService
+    private jwtService: JwtService,
+    private tokenBlacklistService: TokenBlacklistService
   ) {}
 
   /**
@@ -151,6 +153,19 @@ export class AuthService {
       return user
     } catch {
       throw new UnauthorizedException('Invalid token')
+    }
+  }
+
+  /**
+   * 7. logout
+   *  - 현재 토큰을 블랙리스트에 추가하여 무효화
+   */
+  async logout(token: string): Promise<{ message: string }> {
+    // 토큰을 블랙리스트에 추가
+    this.tokenBlacklistService.addToBlacklist(token)
+
+    return {
+      message: 'Successfully logged out',
     }
   }
 }
