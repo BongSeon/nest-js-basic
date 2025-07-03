@@ -9,11 +9,13 @@ import {
   ParseIntPipe,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common'
 import { Request } from 'express'
 import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
+import { PaginationDto } from './dto/pagination.dto'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { JwtPayload } from '../auth/types/jwt-payload.interface'
 
@@ -33,8 +35,8 @@ export class PostsController {
   }
 
   @Get()
-  async findAll(): Promise<any[]> {
-    return await this.postsService.findAll()
+  async findAll(@Query() paginationDto: PaginationDto): Promise<any> {
+    return await this.postsService.findAll(paginationDto)
   }
 
   @Get(':id')

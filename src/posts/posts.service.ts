@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
+import { PaginationDto } from './dto/pagination.dto'
 import { Post } from './entities/post.entity'
 import { User } from '../users/entities/user.entity'
 
@@ -56,13 +57,39 @@ export class PostsService {
     return this.formatPostResponse(savedPost)
   }
 
-  async findAll(): Promise<any[]> {
-    const posts = await this.postsRepository.find({
+  async findAll(
+    paginationDto: PaginationDto = { page: 1, limit: 10 }
+  ): Promise<{
+    items: any[]
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }> {
+    const { page = 1, limit = 10 } = paginationDto
+    const skip = (page - 1) * limit
+
+    const [posts, total] = await this.postsRepository.findAndCount({
       relations: ['user'],
+      order: {
+        createdAt: 'DESC',
+      },
+      skip,
+      take: limit,
     })
 
+    const totalPages = Math.ceil(total / limit)
+
     // 각 Post의 User 정보를 필터링하고 userId 제거
-    return posts.map((post) => this.formatPostResponse(post))
+    const formattedPosts = posts.map((post) => this.formatPostResponse(post))
+
+    return {
+      items: formattedPosts,
+      total,
+      page,
+      limit,
+      totalPages,
+    }
   }
 
   async findOne(id: number): Promise<any> {
