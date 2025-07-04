@@ -37,8 +37,14 @@ export class JwtAuthGuard implements CanActivate {
       // 요청 객체에 사용자 정보를 추가
       request['user'] = payload
       return true
-    } catch {
-      throw new UnauthorizedException('Invalid token')
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Token has expired')
+      } else if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException('Invalid token format')
+      } else {
+        throw new UnauthorizedException('Invalid token')
+      }
     }
   }
 

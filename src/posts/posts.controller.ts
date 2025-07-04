@@ -35,16 +35,19 @@ export class PostsController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   async findAll(@Query() paginationDto: PaginationDto): Promise<any> {
     return await this.postsService.findAll(paginationDto)
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<any> {
     return await this.postsService.findOne(id)
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePostDto: UpdatePostDto
@@ -53,6 +56,7 @@ export class PostsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.postsService.remove(id)
   }
