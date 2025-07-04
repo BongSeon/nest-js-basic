@@ -95,7 +95,7 @@ export class AuthService {
         ? process.env.JWT_ACCESS_SECRET || 'access-secret'
         : process.env.JWT_REFRESH_SECRET || 'refresh-secret'
 
-    const expiresIn = type === 'access' ? '15m' : '7d'
+    const expiresIn = type === 'access' ? '1m' : '7d'
 
     return this.jwtService.sign(payload, {
       secret,
@@ -166,6 +166,55 @@ export class AuthService {
 
     return {
       message: 'Successfully logged out',
+    }
+  }
+
+  /**
+   * 8. refreshToken
+   *  - 리프레시 토큰을 검증하고 새로운 access 토큰을 발급
+   */
+  async refreshToken(refreshToken: string) {
+    try {
+      // 리프레시 토큰 검증
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
+      })
+
+      // 블랙리스트 확인
+      if (this.tokenBlacklistService.isBlacklisted(refreshToken)) {
+        throw new UnauthorizedException('Refresh token has been revoked')
+      }
+
+      // DB에서 사용자 확인
+      const user = await this.usersRepository.findOne({
+        where: { id: payload.sub },
+      })
+
+      if (!user) {
+        throw new UnauthorizedException('User not found')
+      }
+
+      // 새로운 access 토큰 발급
+      const newPayload = { username: user.username, sub: user.id }
+      const newAccessToken = this.signToken(newPayload, 'access')
+
+      return {
+        accessToken: newAccessToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          nickname: user.nickname,
+        },
+      }
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Refresh token has expired')
+      } else if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException('Invalid refresh token format')
+      } else {
+        throw new UnauthorizedException('Invalid refresh token')
+      }
     }
   }
 }

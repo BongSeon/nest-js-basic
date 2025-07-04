@@ -9,6 +9,7 @@ import {
 import { Request } from 'express'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
+import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { BasicAuthGuard } from './guards/basic-auth.guard'
 import { JwtAuthGuard } from './guards/jwt-auth.guard'
 
@@ -43,6 +44,11 @@ export class AuthController {
 
     // 토큰을 블랙리스트에 추가하여 로그아웃 처리
     return await this.authService.logout(token)
+  }
+
+  @Post('refresh')
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    return await this.authService.refreshToken(refreshTokenDto.refreshToken)
   }
 
   @Post('hello')
