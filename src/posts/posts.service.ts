@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
@@ -105,13 +106,22 @@ export class PostsService {
     return this.formatPostResponse(post)
   }
 
-  async update(id: number, updatePostDto: UpdatePostDto): Promise<any> {
+  async update(
+    id: number,
+    updatePostDto: UpdatePostDto,
+    userId: number
+  ): Promise<any> {
     const post = await this.postsRepository.findOne({
       where: { id },
       relations: ['user'],
     })
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`)
+    }
+
+    // 게시글 작성자만 수정할 수 있도록 권한 체크
+    if (post.userId !== userId) {
+      throw new ForbiddenException('You can only update your own posts')
     }
 
     // userId가 제공된 경우 사용자 존재 여부 확인
@@ -133,7 +143,7 @@ export class PostsService {
     return this.formatPostResponse(updatedPost)
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, userId: number): Promise<void> {
     const post = await this.postsRepository.findOne({
       where: { id },
       relations: ['user'],
@@ -141,6 +151,12 @@ export class PostsService {
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`)
     }
+
+    // 게시글 작성자만 삭제할 수 있도록 권한 체크
+    if (post.userId !== userId) {
+      throw new ForbiddenException('You can only delete your own posts')
+    }
+
     await this.postsRepository.remove(post)
   }
 }

@@ -95,7 +95,7 @@ export class AuthService {
         ? process.env.JWT_ACCESS_SECRET || 'access-secret'
         : process.env.JWT_REFRESH_SECRET || 'refresh-secret'
 
-    const expiresIn = type === 'access' ? '1m' : '7d'
+    const expiresIn = type === 'access' ? '3m' : '7d'
 
     return this.jwtService.sign(payload, {
       secret,

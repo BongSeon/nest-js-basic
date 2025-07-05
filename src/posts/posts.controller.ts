@@ -50,14 +50,22 @@ export class PostsController {
   @UseGuards(JwtAuthGuard)
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updatePostDto: UpdatePostDto
+    @Body() updatePostDto: UpdatePostDto,
+    @Req() request: Request
   ): Promise<any> {
-    return await this.postsService.update(id, updatePostDto)
+    const user = request['user'] as JwtPayload
+    const userId = user.sub
+    return await this.postsService.update(id, updatePostDto, userId)
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    await this.postsService.remove(id)
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: Request
+  ): Promise<void> {
+    const user = request['user'] as JwtPayload
+    const userId = user.sub
+    await this.postsService.remove(id, userId)
   }
 }
