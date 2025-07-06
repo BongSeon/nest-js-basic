@@ -5,8 +5,7 @@ import { PostsController } from './posts.controller'
 import { PostsService } from './posts.service'
 import { Post } from './entities/post.entity'
 import { User } from '../users/entities/user.entity'
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
-import { TokenBlacklistService } from '../auth/services/token-blacklist.service'
+import { AuthModule } from '../auth/auth.module'
 
 @Module({
   imports: [
@@ -15,8 +14,9 @@ import { TokenBlacklistService } from '../auth/services/token-blacklist.service'
       secret: process.env.JWT_ACCESS_SECRET || 'access-secret',
       signOptions: { expiresIn: '15m' },
     }),
+    AuthModule,
   ],
   controllers: [PostsController],
-  providers: [PostsService, JwtAuthGuard, TokenBlacklistService],
+  providers: [PostsService],
 })
 export class PostsModule {}

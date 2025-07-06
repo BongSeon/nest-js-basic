@@ -217,4 +217,36 @@ export class AuthService {
       }
     }
   }
+
+  /**
+   * 9. extractTokenFromHeader
+   *  - 헤더에서 토큰을 추출하는 로직
+   */
+  extractTokenFromHeader(
+    request: Request,
+    tokenType: 'Bearer' | 'Basic'
+  ): string | undefined {
+    const rawToken = request.headers['authorization']
+
+    if (!rawToken) {
+      throw new UnauthorizedException('Token not found in Authorization header')
+    }
+
+    if (rawToken.startsWith(tokenType + ' ')) {
+      return rawToken.substring(tokenType.length + 1)
+    }
+
+    throw new UnauthorizedException('Invalid token format')
+  }
+
+  /**
+   * 10. decodeBasicToken
+   *  - Basic 토큰을 디코딩하는 로직
+   */
+  decodeBasicToken(token: string) {
+    const credentials = Buffer.from(token, 'base64').toString('utf-8')
+    const [username, password] = credentials.split(':')
+
+    return { username, password }
+  }
 }
