@@ -3,10 +3,15 @@ import { JwtModule } from '@nestjs/jwt'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { AuthService } from './auth.service'
 import { AuthController } from './auth.controller'
-import { BasicAuthGuard } from './guards/basic-auth.guard'
-import { JwtAuthGuard } from './guards/jwt-auth.guard'
+import { BasicTokenGuard } from './guards/basic-token.guard'
+import {
+  AccessTokenGuard,
+  BearerTokenGuard,
+  RefreshTokenGuard,
+} from './guards/bearer-token.guard'
 import { TokenBlacklistService } from './services/token-blacklist.service'
 import { User } from '../users/entities/user.entity'
+import { UsersModule } from '../users/users.module'
 
 @Module({
   imports: [
@@ -15,9 +20,24 @@ import { User } from '../users/entities/user.entity'
       secret: process.env.JWT_ACCESS_SECRET || 'access-secret',
       signOptions: { expiresIn: '15m' },
     }),
+    UsersModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, BasicAuthGuard, JwtAuthGuard, TokenBlacklistService],
-  exports: [AuthService, BasicAuthGuard, JwtAuthGuard, TokenBlacklistService],
+  providers: [
+    AuthService,
+    BasicTokenGuard,
+    BearerTokenGuard,
+    AccessTokenGuard,
+    RefreshTokenGuard,
+    TokenBlacklistService,
+  ],
+  exports: [
+    AuthService,
+    BasicTokenGuard,
+    BearerTokenGuard,
+    AccessTokenGuard,
+    RefreshTokenGuard,
+    TokenBlacklistService,
+  ],
 })
 export class AuthModule {}

@@ -71,11 +71,9 @@ export class AuthService {
    *  - 1, 2번 과정에서 필요한 AccessToken과 RefreshToken을 반환한다.
    */
   async loginUser(user: User) {
-    const payload = { username: user.username, sub: user.id }
-
     return {
-      accessToken: this.signToken(payload, 'access'),
-      refreshToken: this.signToken(payload, 'refresh'),
+      accessToken: this.signToken(user, 'access'),
+      refreshToken: this.signToken(user, 'refresh'),
       user: {
         id: user.id,
         username: user.username,
@@ -89,11 +87,14 @@ export class AuthService {
    * 4. signToken
    *  - 3번 과정에서 필요한 AccessToken과 RefreshToken을 sign하는 로직
    */
-  signToken(payload: any, type: 'access' | 'refresh') {
-    const secret =
-      type === 'access'
-        ? process.env.JWT_ACCESS_SECRET || 'access-secret'
-        : process.env.JWT_REFRESH_SECRET || 'refresh-secret'
+  signToken(user: Pick<User, 'username' | 'id'>, type: 'access' | 'refresh') {
+    const payload = {
+      username: user.username,
+      sub: user.id,
+      type: type,
+    }
+
+    const secret = process.env.JWT_SECRET || 'jwt-secret'
 
     const expiresIn = type === 'access' ? '3m' : '7d'
 
@@ -177,7 +178,7 @@ export class AuthService {
     try {
       // 리프레시 토큰 검증
       const payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
+        secret: process.env.JWT_SECRET || 'jwt-secret',
       })
 
       // 블랙리스트 확인
@@ -195,8 +196,7 @@ export class AuthService {
       }
 
       // 새로운 access 토큰 발급
-      const newPayload = { username: user.username, sub: user.id }
-      const newAccessToken = this.signToken(newPayload, 'access')
+      const newAccessToken = this.signToken(user, 'access')
 
       return {
         accessToken: newAccessToken,
@@ -248,5 +248,15 @@ export class AuthService {
     const [username, password] = credentials.split(':')
 
     return { username, password }
+  }
+
+  /**
+   * 11. verifyToken
+   *  - 토큰을 검증하는 로직
+   */
+  verifyToken(token: string) {
+    const secret = process.env.JWT_SECRET || 'jwt-secret'
+
+    return this.jwtService.verifyAsync(token, { secret })
   }
 }

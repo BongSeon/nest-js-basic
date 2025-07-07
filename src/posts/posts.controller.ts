@@ -16,7 +16,7 @@ import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { PaginationDto } from './dto/pagination.dto'
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
+import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { JwtPayload } from '../auth/types/jwt-payload.interface'
 
 @Controller('posts')
@@ -24,7 +24,7 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AccessTokenGuard)
   async create(
     @Body() createPostDto: CreatePostDto,
     @Req() request: Request
@@ -35,19 +35,19 @@ export class PostsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AccessTokenGuard)
   async findAll(@Query() paginationDto: PaginationDto): Promise<any> {
     return await this.postsService.findAll(paginationDto)
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AccessTokenGuard)
   async findOne(@Param('id', ParseIntPipe) id: number): Promise<any> {
     return await this.postsService.findOne(id)
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AccessTokenGuard)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePostDto: UpdatePostDto,
@@ -59,7 +59,7 @@ export class PostsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AccessTokenGuard)
   async remove(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: Request

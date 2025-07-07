@@ -6,6 +6,7 @@ import { PostsService } from './posts.service'
 import { Post } from './entities/post.entity'
 import { User } from '../users/entities/user.entity'
 import { AuthModule } from '../auth/auth.module'
+import { UsersModule } from '../users/users.module'
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuthModule } from '../auth/auth.module'
       signOptions: { expiresIn: '15m' },
     }),
     AuthModule,
+    UsersModule,
   ],
   controllers: [PostsController],
   providers: [PostsService],

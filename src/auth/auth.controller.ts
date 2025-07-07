@@ -10,8 +10,11 @@ import { Request } from 'express'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
-import { BasicAuthGuard } from './guards/basic-auth.guard'
-import { JwtAuthGuard } from './guards/jwt-auth.guard'
+import { BasicTokenGuard } from './guards/basic-token.guard'
+import {
+  AccessTokenGuard,
+  RefreshTokenGuard,
+} from './guards/bearer-token.guard'
 
 @Controller('auth')
 export class AuthController {
@@ -23,14 +26,14 @@ export class AuthController {
   }
 
   @Post('login')
-  @UseGuards(BasicAuthGuard)
+  @UseGuards(BasicTokenGuard)
   async login(@Req() request: Request) {
     const { username, password } = request['credentials']
     return await this.authService.loginWithUsername({ username, password })
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AccessTokenGuard)
   async logout(@Req() request: Request) {
     // Authorization 헤더에서 Bearer 토큰 추출
     const authHeader = request.headers.authorization
@@ -47,12 +50,13 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @UseGuards(RefreshTokenGuard)
   async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
     return await this.authService.refreshToken(refreshTokenDto.refreshToken)
   }
 
   @Post('hello')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AccessTokenGuard)
   async hello(@Req() request: Request) {
     // Authorization 헤더에서 Bearer 토큰 추출
     const authHeader = request.headers.authorization
