@@ -8,16 +8,15 @@ import {
   Delete,
   ParseIntPipe,
   UseGuards,
-  Req,
   Query,
 } from '@nestjs/common'
-import { Request } from 'express'
 import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { PaginationDto } from './dto/pagination.dto'
 import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
-import { JwtPayload } from 'src/auth/types/jwt-payload.interface'
+import { User } from 'src/users/decorator/user.decorator'
+import { UserPayload } from 'src/users/types/user-payload.interface'
 
 @Controller('posts')
 export class PostsController {
@@ -26,12 +25,11 @@ export class PostsController {
   @Post()
   @UseGuards(AccessTokenGuard)
   async create(
-    @Body() createPostDto: CreatePostDto,
-    @Req() request: Request
+    @User() user: UserPayload,
+    @Body()
+    createPostDto: CreatePostDto
   ): Promise<any> {
-    const user = request['user'] as JwtPayload
-
-    const userId = user.sub // JWT 토큰에서 추출한 사용자 ID
+    const userId = user.id
     return await this.postsService.create(createPostDto, userId)
   }
 
@@ -52,10 +50,9 @@ export class PostsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePostDto: UpdatePostDto,
-    @Req() request: Request
+    @User() user: UserPayload
   ): Promise<any> {
-    const user = request['user'] as JwtPayload
-    const userId = user.sub
+    const userId = user.id
     return await this.postsService.update(id, updatePostDto, userId)
   }
 
@@ -63,10 +60,9 @@ export class PostsController {
   @UseGuards(AccessTokenGuard)
   async remove(
     @Param('id', ParseIntPipe) id: number,
-    @Req() request: Request
+    @User() user: UserPayload
   ): Promise<void> {
-    const user = request['user'] as JwtPayload
-    const userId = user.sub
+    const userId = user.id
     await this.postsService.remove(id, userId)
   }
 }
