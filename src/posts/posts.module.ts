@@ -12,7 +12,7 @@ import { UsersModule } from '../users/users.module'
   imports: [
     TypeOrmModule.forFeature([Post, User]),
     JwtModule.register({
-      secret: process.env.JWT_ACCESS_SECRET || 'access-secret',
+      secret: process.env.JWT_SECRET || 'jwt-secret',
       signOptions: { expiresIn: '15m' },
     }),
     AuthModule,

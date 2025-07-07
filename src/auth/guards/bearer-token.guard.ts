@@ -4,16 +4,17 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common'
+import { JwtService } from '@nestjs/jwt'
 import { TokenBlacklistService } from '../services/token-blacklist.service'
 import { AuthService } from '../auth.service'
-import { UsersService } from '../../users/users.service'
+import { JwtPayload } from '../types/jwt-payload.interface'
 
 @Injectable()
 export class BearerTokenGuard implements CanActivate {
   constructor(
+    private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
-    private authService: AuthService,
-    private userService: UsersService
+    private authService: AuthService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -25,20 +26,31 @@ export class BearerTokenGuard implements CanActivate {
       throw new UnauthorizedException('Token not found in Authorization header')
     }
 
-    const result = await this.authService.verifyToken(token)
-
     // 블랙리스트 확인
     if (this.tokenBlacklistService.isBlacklisted(token)) {
       throw new UnauthorizedException('Token has been revoked')
     }
 
-    const user = await this.userService.findOne(result.sub)
+    try {
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+        secret: process.env.JWT_SECRET || 'jwt-secret',
+      })
 
-    request.token = token
-    request.tokenType = result.type
-    request.user = user
+      // 요청 객체에 사용자 정보를 추가
+      request.token = token
+      request.tokenType = payload.type
+      request.user = payload
 
-    return true
+      return true
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Token has expired')
+      } else if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException('Invalid token format')
+      } else {
+        throw new UnauthorizedException('Invalid token')
+      }
+    }
   }
 }
 

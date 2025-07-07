@@ -139,7 +139,7 @@ export class AuthService {
     try {
       // 토큰 검증
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_ACCESS_SECRET || 'access-secret',
+        secret: process.env.JWT_SECRET || 'jwt-secret',
       })
 
       // DB에서 사용자 찾기

@@ -17,7 +17,7 @@ import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { PaginationDto } from './dto/pagination.dto'
 import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
-import { JwtPayload } from '../auth/types/jwt-payload.interface'
+import { JwtPayload } from 'src/auth/types/jwt-payload.interface'
 
 @Controller('posts')
 export class PostsController {
@@ -30,6 +30,7 @@ export class PostsController {
     @Req() request: Request
   ): Promise<any> {
     const user = request['user'] as JwtPayload
+
     const userId = user.sub // JWT 토큰에서 추출한 사용자 ID
     return await this.postsService.create(createPostDto, userId)
   }
