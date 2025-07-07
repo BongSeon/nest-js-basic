@@ -7,7 +7,7 @@ import { UserPayload } from '../types/user-payload.interface'
 import { JwtPayload } from 'src/auth/types/jwt-payload.interface'
 
 export const User = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext) => {
+  (data: keyof UserPayload, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest()
 
     const payload = request['user'] as JwtPayload
@@ -22,6 +22,6 @@ export const User = createParamDecorator(
       )
     }
 
-    return user
+    return data ? user[data] : user
   }
 )

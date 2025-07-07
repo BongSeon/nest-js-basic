@@ -25,11 +25,10 @@ export class PostsController {
   @Post()
   @UseGuards(AccessTokenGuard)
   async create(
-    @User() user: UserPayload,
+    @User('id') userId: number,
     @Body()
     createPostDto: CreatePostDto
   ): Promise<any> {
-    const userId = user.id
     return await this.postsService.create(createPostDto, userId)
   }
 

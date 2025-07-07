@@ -255,8 +255,13 @@ export class AuthService {
    *  - 토큰을 검증하는 로직
    */
   verifyToken(token: string) {
-    const secret = process.env.JWT_SECRET || 'jwt-secret'
-
-    return this.jwtService.verifyAsync(token, { secret })
+    try {
+      const secret = process.env.JWT_SECRET || 'jwt-secret'
+      return this.jwtService.verifyAsync(token, { secret })
+    } catch (error) {
+      throw new UnauthorizedException(
+        '토큰이 만료되었거나 유효하지 않습니다.' + error.message
+      )
+    }
   }
 }
