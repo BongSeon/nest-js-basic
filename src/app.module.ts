@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module'
 import { Post } from './posts/entities/post.entity'
 import { User } from './users/entities/user.entity'
 import { AuthModule } from './auth/auth.module'
+import { LandingGateway } from './gateway/landing.gateway'
 
 @Module({
   imports: [
@@ -25,6 +26,6 @@ import { AuthModule } from './auth/auth.module'
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, LandingGateway],
 })
 export class AppModule {}
