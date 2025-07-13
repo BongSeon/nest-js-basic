@@ -96,7 +96,7 @@ export class AuthService {
 
     const secret = process.env.JWT_SECRET || 'jwt-secret'
 
-    const expiresIn = type === 'access' ? '3m' : '7d'
+    const expiresIn = type === 'access' ? '10m' : '1h'
 
     return this.jwtService.sign(payload, {
       secret,
