@@ -172,49 +172,29 @@ export class AuthService {
 
   /**
    * 8. refreshToken
-   *  - 리프레시 토큰을 검증하고 새로운 access 토큰을 발급
+   *  - RefreshTokenGuard를 통해 이미 검증된 사용자 정보를 받아 새로운 access 토큰을 발급
    */
-  async refreshToken(refreshToken: string) {
-    try {
-      // 리프레시 토큰 검증
-      const payload = await this.jwtService.verifyAsync(refreshToken, {
-        secret: process.env.JWT_SECRET || 'jwt-secret',
-      })
+  async refreshToken(userId: number) {
+    // DB에서 사용자 확인
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    })
 
-      // 블랙리스트 확인
-      if (this.tokenBlacklistService.isBlacklisted(refreshToken)) {
-        throw new UnauthorizedException('Refresh token has been revoked')
-      }
+    if (!user) {
+      throw new UnauthorizedException('User not found')
+    }
 
-      // DB에서 사용자 확인
-      const user = await this.usersRepository.findOne({
-        where: { id: payload.sub },
-      })
+    // 새로운 access 토큰 발급
+    const newAccessToken = this.signToken(user, 'access')
 
-      if (!user) {
-        throw new UnauthorizedException('User not found')
-      }
-
-      // 새로운 access 토큰 발급
-      const newAccessToken = this.signToken(user, 'access')
-
-      return {
-        accessToken: newAccessToken,
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          nickname: user.nickname,
-        },
-      }
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Refresh token has expired')
-      } else if (error.name === 'JsonWebTokenError') {
-        throw new UnauthorizedException('Invalid refresh token format')
-      } else {
-        throw new UnauthorizedException('Invalid refresh token')
-      }
+    return {
+      accessToken: newAccessToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        nickname: user.nickname,
+      },
     }
   }
 

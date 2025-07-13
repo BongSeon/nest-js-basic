@@ -9,7 +9,6 @@ import {
 import { Request } from 'express'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
-import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { BasicTokenGuard } from './guards/basic-token.guard'
 import {
   AccessTokenGuard,
@@ -51,8 +50,9 @@ export class AuthController {
 
   @Post('refresh')
   @UseGuards(RefreshTokenGuard)
-  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
-    return await this.authService.refreshToken(refreshTokenDto.refreshToken)
+  async refresh(@Req() request: Request) {
+    const user = request['user'] as { sub: number }
+    return await this.authService.refreshToken(user.sub)
   }
 
   @Post('hello')
