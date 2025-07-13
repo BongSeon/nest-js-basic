@@ -1,16 +1,11 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsEmail,
-  MinLength,
-  MaxLength,
-} from 'class-validator'
+import { IsString, IsNotEmpty, IsEmail, Length } from 'class-validator'
 
 export class BaseUserDto {
   @IsString()
   @IsNotEmpty()
-  @MinLength(3)
-  @MaxLength(50)
+  @Length(3, 50, {
+    message: 'username은 3자 이상 50자 이하여야 합니다.',
+  })
   username: string
 
   @IsEmail()
@@ -19,13 +14,15 @@ export class BaseUserDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(2)
-  @MaxLength(100)
+  @Length(2, 100, {
+    message: 'nickname은 2자 이상 100자 이하여야 합니다.',
+  })
   nickname: string
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(4)
-  @MaxLength(100)
+  @Length(4, 100, {
+    message: 'password은 4자 이상 100자 이하여야 합니다.',
+  })
   password: string
 }
