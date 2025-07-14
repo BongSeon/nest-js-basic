@@ -21,21 +21,11 @@ export class PostsService {
     private usersRepository: Repository<User>
   ) {}
 
-  private filterUserInfo(user: User) {
-    if (!user) return null
-    return {
-      id: user.id,
-      username: user.username,
-      nickname: user.nickname,
-    }
-  }
-
   private formatPostResponse(post: Post) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId, ...postWithoutUserId } = post
     return {
       ...postWithoutUserId,
-      user: this.filterUserInfo(post.user),
     }
   }
 
@@ -54,8 +44,14 @@ export class PostsService {
     })
     const savedPost = await this.postsRepository.save(post)
 
+    // user 관계를 포함하여 다시 조회
+    const postWithUser = await this.postsRepository.findOne({
+      where: { id: savedPost.id },
+      relations: ['user'],
+    })
+
     // User 정보를 포함하여 반환하되 userId는 제외
-    return this.formatPostResponse(savedPost)
+    return this.formatPostResponse(postWithUser)
   }
 
   async findAll(

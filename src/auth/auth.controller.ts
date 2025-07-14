@@ -9,6 +9,7 @@ import {
 import { Request } from 'express'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
+import { VerifyEmailDto } from './dto/verify-email.dto'
 import { BasicTokenGuard } from './guards/basic-token.guard'
 import {
   AccessTokenGuard,
@@ -19,9 +20,25 @@ import {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * 1단계 회원가입: 사용자 정보를 받아서 임시 사용자를 생성하고 인증 코드를 생성
+   */
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     return await this.authService.registerWithEmail(registerDto)
+  }
+
+  @Post('register/resend-code')
+  async resendVerificationCode(@Body() body: { email?: string }) {
+    return await this.authService.resendVerificationCode(body.email)
+  }
+
+  /**
+   * 2단계 회원가입: 이메일 인증 코드 확인
+   */
+  @Post('register/verify-code')
+  async registerStep2(@Body() verifyEmailDto: VerifyEmailDto) {
+    return await this.authService.registerStep2(verifyEmailDto)
   }
 
   @Post('login')

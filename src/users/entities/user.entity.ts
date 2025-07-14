@@ -5,35 +5,42 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm'
-import { Expose, Exclude } from 'class-transformer'
+import { Exclude } from 'class-transformer'
 
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
-  @Expose()
   id: number
 
   @Column({ length: 50, unique: true })
-  @Expose()
   username: string
 
   @Column({ length: 100 })
-  @Expose()
   email: string
 
   @Column({ length: 100 })
-  @Expose()
   nickname: string
 
   @Column({ length: 255 })
   @Exclude()
   password: string
 
+  @Column({ default: false })
+  isEmailVerified: boolean
+
+  @Column({ length: 6, nullable: true })
+  @Exclude()
+  emailVerificationCode: string
+
+  @Column({ nullable: true })
+  @Exclude()
+  emailVerificationExpiresAt: Date
+
   @CreateDateColumn()
-  @Expose()
+  @Exclude()
   createdAt: Date
 
   @UpdateDateColumn()
-  @Expose()
+  @Exclude()
   updatedAt: Date
 }

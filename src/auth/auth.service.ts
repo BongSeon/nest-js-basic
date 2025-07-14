@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
@@ -10,6 +11,7 @@ import * as bcrypt from 'bcrypt'
 import { User } from '../users/entities/user.entity'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
+import { VerifyEmailDto } from './dto/verify-email.dto'
 import { TokenBlacklistService } from './services/token-blacklist.service'
 
 @Injectable()
@@ -22,10 +24,7 @@ export class AuthService {
   ) {}
 
   /**
-   * 1. registerWithEmail
-   *    - email, username, nickname, password를 받아서 새로운 사용자를 생성한다.
-   *    - 생성이 완료되면 accessToken과 refreshToken을 반환한다.
-   *      회원가입 후 다시 로그인할 필요 없도록 (쓸데없는 과정을 줄이기 위해)
+   * 1단계 회원가입: 사용자 정보를 받아서 임시 사용자를 생성하고 인증 코드를 생성
    */
   async registerWithEmail(registerDto: RegisterDto) {
     // 중복 사용자 확인
@@ -40,16 +39,120 @@ export class AuthService {
     // 비밀번호 해싱
     const hashedPassword = await bcrypt.hash(registerDto.password, 10)
 
-    // 사용자 생성
+    // 6자리 랜덤 인증 코드 생성
+    const verificationCode = this.generateVerificationCode()
+
+    // 인증 코드 만료 시간 설정 (10분 후)
+    const expiresAt = new Date()
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10)
+
+    // 사용자 생성 (이메일 미인증 상태)
     const user = this.usersRepository.create({
       ...registerDto,
       password: hashedPassword,
+      isEmailVerified: false,
+      emailVerificationCode: verificationCode,
+      emailVerificationExpiresAt: expiresAt,
     })
 
     const savedUser = await this.usersRepository.save(user)
 
-    // 토큰 생성 및 반환
-    return this.loginUser(savedUser)
+    // 테스트용으로 인증 코드를 반환 (실제로는 이메일로 발송)
+    return {
+      message: '회원가입 1단계가 완료되었습니다. 이메일 인증을 진행해주세요.',
+      email: savedUser.email,
+      verificationCode: verificationCode, // 테스트용 - 실제 배포시 제거
+      expiresAt: expiresAt,
+    }
+  }
+
+  /**
+   * 2단계 회원가입: 이메일 인증 코드 확인
+   */
+  async registerStep2(verifyEmailDto: VerifyEmailDto) {
+    const { email, verificationCode } = verifyEmailDto
+
+    // 사용자 찾기
+    const user = await this.usersRepository.findOne({
+      where: { email },
+    })
+
+    if (!user) {
+      throw new BadRequestException('사용자를 찾을 수 없습니다.')
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('이미 인증된 이메일입니다.')
+    }
+
+    // 인증 코드 확인
+    if (user.emailVerificationCode !== verificationCode) {
+      throw new BadRequestException('인증 코드가 일치하지 않습니다.')
+    }
+
+    // 인증 코드 만료 확인
+    if (new Date() > user.emailVerificationExpiresAt) {
+      throw new BadRequestException('인증 코드가 만료되었습니다.')
+    }
+
+    // 이메일 인증 완료 처리
+    user.isEmailVerified = true
+    user.emailVerificationCode = null
+    user.emailVerificationExpiresAt = null
+
+    await this.usersRepository.save(user)
+
+    // 로그인 처리 (토큰 발급)
+    return this.loginUser(user)
+  }
+
+  /**
+   * 6자리 랜덤 인증 코드 생성
+   */
+  private generateVerificationCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString()
+  }
+
+  /**
+   * 인증 코드 재발송
+   */
+  async resendVerificationCode(email?: string) {
+    if (!email) {
+      throw new BadRequestException('이메일을 입력해주세요.')
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { email },
+    })
+
+    if (!user) {
+      throw new BadRequestException('사용자를 찾을 수 없습니다.')
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('이미 인증된 이메일입니다.')
+    }
+
+    // 새로운 인증 코드 생성
+    const verificationCode = this.generateVerificationCode()
+
+    // 인증 코드 만료 시간 설정 (10분 후)
+    const expiresAt = new Date()
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10)
+
+    // 인증 코드 업데이트
+    user.emailVerificationCode = verificationCode
+    user.emailVerificationExpiresAt = expiresAt
+
+    await this.usersRepository.save(user)
+
+    // 테스트용으로 인증 코드를 반환 (실제로는 이메일로 발송)
+    return {
+      message: '인증 코드가 재발송되었습니다.',
+      email: user.email,
+      verificationCode: verificationCode, // 테스트용 - 실제 배포시 제거
+      expiresAt: expiresAt,
+    }
   }
 
   /**
@@ -74,12 +177,7 @@ export class AuthService {
     return {
       accessToken: this.signToken(user, 'access'),
       refreshToken: this.signToken(user, 'refresh'),
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        nickname: user.nickname,
-      },
+      user,
     }
   }
 
