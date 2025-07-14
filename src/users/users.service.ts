@@ -9,6 +9,8 @@ import * as bcrypt from 'bcrypt'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { User } from './entities/user.entity'
+import { UserPayload } from './types/user-payload.interface'
+import { MeDto } from './dto/me.dto'
 
 @Injectable()
 export class UsersService {
@@ -67,5 +69,32 @@ export class UsersService {
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id)
     await this.usersRepository.remove(user)
+  }
+
+  /**
+   * 현재 인증된 사용자의 정보를 조회합니다.
+   * @param userPayload JWT 토큰에서 추출된 사용자 정보
+   * @returns 사용자 정보 (createdAt, updatedAt 포함)
+   */
+  async getMe(userPayload: UserPayload): Promise<MeDto> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userPayload.id },
+    })
+
+    if (!user) {
+      throw new NotFoundException('User not found')
+    }
+
+    // MeDto 형태로 변환하여 createdAt, updatedAt 포함
+    const meDto = new MeDto()
+    meDto.id = user.id
+    meDto.username = user.username
+    meDto.email = user.email
+    meDto.nickname = user.nickname
+    meDto.isEmailVerified = user.isEmailVerified
+    meDto.createdAt = user.createdAt
+    meDto.updatedAt = user.updatedAt
+
+    return meDto
   }
 }
