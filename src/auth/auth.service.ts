@@ -13,6 +13,7 @@ import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { VerifyEmailDto } from './dto/verify-email.dto'
 import { TokenBlacklistService } from './services/token-blacklist.service'
+import { MeDto } from '../users/dto/me.dto'
 
 @Injectable()
 export class AuthService {
@@ -341,5 +342,38 @@ export class AuthService {
         '토큰이 만료되었거나 유효하지 않습니다.' + error.message
       )
     }
+  }
+
+  /**
+   * 현재 인증된 사용자의 정보를 조회합니다.
+   * @param userPayload JWT 토큰에서 추출된 사용자 정보
+   * @returns 사용자 정보 (createdAt, updatedAt 포함)
+   */
+  async getMe(query?: { id?: number; username?: string }): Promise<MeDto> {
+    let user: User
+    if (query.id) {
+      user = await this.usersRepository.findOne({
+        where: { id: query.id as number },
+      })
+    } else if (query.username) {
+      user = await this.usersRepository.findOne({
+        where: { username: query.username },
+      })
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('User not found')
+    }
+
+    // MeDto 형태로 변환하여 createdAt, updatedAt 포함
+    const meDto = new MeDto()
+    meDto.id = user.id
+    meDto.username = user.username
+    meDto.email = user.email
+    meDto.nickname = user.nickname
+    meDto.isEmailVerified = user.isEmailVerified
+    meDto.createdAt = user.createdAt
+
+    return meDto
   }
 }

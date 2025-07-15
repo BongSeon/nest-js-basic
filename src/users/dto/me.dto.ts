@@ -11,7 +11,4 @@ export class MeDto extends PickType(User, [
 ] as const) {
   @Expose()
   createdAt: Date
-
-  @Expose()
-  updatedAt: Date
 }

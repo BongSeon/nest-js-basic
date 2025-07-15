@@ -5,6 +5,7 @@ import {
   UseGuards,
   Req,
   UnauthorizedException,
+  Get,
 } from '@nestjs/common'
 import { Request } from 'express'
 import { AuthService } from './auth.service'
@@ -15,6 +16,9 @@ import {
   AccessTokenGuard,
   RefreshTokenGuard,
 } from './guards/bearer-token.guard'
+import { UserPayload } from '../users/types/user-payload.interface'
+import { User as UserDecorator } from '../users/decorator/user.decorator'
+import { MeDto } from '../users/dto/me.dto'
 
 @Controller('auth')
 export class AuthController {
@@ -97,5 +101,14 @@ export class AuthController {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }
+  }
+
+  /**
+   * 내 정보 조회
+   */
+  @Get('me')
+  @UseGuards(AccessTokenGuard)
+  async getMe(@UserDecorator() user: UserPayload): Promise<MeDto> {
+    return await this.authService.getMe(user)
   }
 }
