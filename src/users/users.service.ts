@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import * as bcrypt from 'bcrypt'
+import { ConfigService } from '@nestjs/config'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { User } from './entities/user.entity'
@@ -14,7 +15,8 @@ import { User } from './entities/user.entity'
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>
+    private usersRepository: Repository<User>,
+    private configService: ConfigService
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -31,7 +33,8 @@ export class UsersService {
     }
 
     // 비밀번호 해싱
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10)
+    const hashRounds = this.configService.get<number>('HASH_ROUNDS', 10)
+    const hashedPassword = await bcrypt.hash(createUserDto.password, hashRounds)
 
     const user = this.usersRepository.create({
       ...createUserDto,
@@ -57,7 +60,11 @@ export class UsersService {
 
     // 비밀번호가 제공된 경우 해싱
     if (updateUserDto.password) {
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10)
+      const hashRounds = this.configService.get<number>('HASH_ROUNDS', 10)
+      updateUserDto.password = await bcrypt.hash(
+        updateUserDto.password,
+        hashRounds
+      )
     }
 
     Object.assign(user, updateUserDto)

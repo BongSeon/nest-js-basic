@@ -8,12 +8,17 @@ import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import * as bcrypt from 'bcrypt'
+import { ConfigService } from '@nestjs/config'
 import { User } from '../users/entities/user.entity'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { VerifyEmailDto } from './dto/verify-email.dto'
 import { TokenBlacklistService } from './services/token-blacklist.service'
 import { MeDto } from '../users/dto/me.dto'
+import {
+  ENV_HASH_ROUNDS_KEY,
+  ENV_JWT_SECRET_KEY,
+} from 'src/common/const/env-keys.const'
 
 @Injectable()
 export class AuthService {
@@ -21,7 +26,8 @@ export class AuthService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private jwtService: JwtService,
-    private tokenBlacklistService: TokenBlacklistService
+    private tokenBlacklistService: TokenBlacklistService,
+    private configService: ConfigService
   ) {}
 
   /**
@@ -38,7 +44,8 @@ export class AuthService {
     }
 
     // 비밀번호 해싱
-    const hashedPassword = await bcrypt.hash(registerDto.password, 10)
+    const hashRounds = this.configService.get<number>(ENV_HASH_ROUNDS_KEY, 10)
+    const hashedPassword = await bcrypt.hash(registerDto.password, hashRounds)
 
     // 6자리 랜덤 인증 코드 생성
     const verificationCode = this.generateVerificationCode()
@@ -193,7 +200,7 @@ export class AuthService {
       type: type,
     }
 
-    const secret = process.env.JWT_SECRET || 'jwt-secret'
+    const secret = this.configService.get<string>(ENV_JWT_SECRET_KEY)
 
     const expiresIn = type === 'access' ? '10m' : '1h'
 
@@ -238,7 +245,7 @@ export class AuthService {
     try {
       // 토큰 검증
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_SECRET || 'jwt-secret',
+        secret: this.configService.get<string>(ENV_JWT_SECRET_KEY),
       })
 
       // DB에서 사용자 찾기
@@ -335,7 +342,7 @@ export class AuthService {
    */
   verifyToken(token: string) {
     try {
-      const secret = process.env.JWT_SECRET || 'jwt-secret'
+      const secret = this.configService.get<string>(ENV_JWT_SECRET_KEY)
       return this.jwtService.verifyAsync(token, { secret })
     } catch (error) {
       throw new UnauthorizedException(
