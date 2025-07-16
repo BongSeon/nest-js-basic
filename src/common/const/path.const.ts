@@ -9,7 +9,7 @@ export const PROFILE_IMAGE_PATH = 'profile'
 export const POST_IMAGE_PATH = 'posts'
 
 // S3 경로
-export const S3_IMAGE_PATH = 'images'
+export const S3_IMAGES_PATH = 'images'
 export const S3_PROFILE_IMAGE_PATH = 'profile'
 export const S3_POST_IMAGE_PATH = 'posts'
 export const S3_TEMP_IMAGE_PATH = 'temp'

@@ -42,23 +42,29 @@ export class PostsService {
 
     // 이미지 URL이 있는 경우 temp에서 posts로 이동
     let finalImageUrl = createPostDto.imageUrl
+    console.log('Creating post with imageUrl:', createPostDto.imageUrl)
+
     if (
       createPostDto.imageUrl &&
       createPostDto.imageUrl.includes('/images/temp/')
     ) {
+      console.log('Image URL contains temp path, moving to posts...')
       try {
-        // URL에서 key 추출 (예: "https://.../images/temp/filename.png" -> "/images/temp/filename.png")
-        const urlParts = createPostDto.imageUrl.split('/')
-        const key = `/${urlParts.slice(-2).join('/')}` // "/images/temp/filename.png"
+        const tempUrl = createPostDto.imageUrl // "/images/temp/filename.png"
+        console.log('Temp URL to move:', tempUrl)
 
         const movedImage =
-          await this.s3UploadService.moveImageFromTempToPosts(key)
+          await this.s3UploadService.moveImageFromTempToPosts(tempUrl)
         finalImageUrl = movedImage.url
+        console.log('Image moved successfully, new URL:', finalImageUrl)
       } catch (error) {
+        console.error('Failed to move image:', error)
         throw new BadRequestException(
           `이미지 이동에 실패했습니다: ${error.message}`
         )
       }
+    } else {
+      console.log('No temp image to move or imageUrl is null')
     }
 
     const post = this.postsRepository.create({

@@ -16,7 +16,7 @@ import {
   ENV_AWS_S3_BUCKET_URL_KEY,
 } from '../const/env-keys.const'
 import {
-  S3_IMAGE_PATH,
+  S3_IMAGES_PATH,
   S3_PROFILE_IMAGE_PATH,
   S3_POST_IMAGE_PATH,
   S3_TEMP_IMAGE_PATH,
@@ -126,7 +126,7 @@ export class S3UploadService {
    * S3 키 생성
    */
   private generateS3Key(folder: string, fileName: string): string {
-    return `${S3_IMAGE_PATH}/${folder}/${fileName}`
+    return `${S3_IMAGES_PATH}/${folder}/${fileName}`
   }
 
   /**
@@ -196,12 +196,14 @@ export class S3UploadService {
   async moveImageFromTempToPosts(
     tempUrl: string
   ): Promise<{ url: string; key: string }> {
+    console.log('Moving image from temp to posts:', { tempUrl })
+
     // tempUrl에서 키 추출 (예: "/images/temp/filename.png" -> "images/temp/filename.png")
     const tempKey = tempUrl.startsWith('/') ? tempUrl.substring(1) : tempUrl
 
     // 새로운 키 생성 (temp -> posts)
     const fileName = tempKey.split('/').pop() // filename.png
-    const newKey = `${S3_IMAGE_PATH}/${S3_POST_IMAGE_PATH}/${fileName}`
+    const newKey = `${S3_IMAGES_PATH}/${S3_POST_IMAGE_PATH}/${fileName}`
 
     const copyCommand = new CopyObjectCommand({
       Bucket: this.bucketName,
@@ -217,6 +219,7 @@ export class S3UploadService {
       await this.deleteImage(tempKey)
 
       const newUrl = `${this.bucketUrl}/${newKey}`
+      // console.log('result:', { newUrl, newKey })
 
       return {
         url: newUrl,
@@ -228,6 +231,7 @@ export class S3UploadService {
         tempKey,
         newKey,
         bucketName: this.bucketName,
+        copySource: `${this.bucketName}/${tempKey}`,
       })
       throw new BadRequestException(
         `이미지 이동에 실패했습니다: ${error.message}`
