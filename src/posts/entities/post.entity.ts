@@ -24,6 +24,10 @@ export class Post {
   @Expose()
   content: string
 
+  @Column({ length: 500, nullable: true })
+  @Expose()
+  imageUrl: string
+
   @Column()
   @Exclude()
   userId: number

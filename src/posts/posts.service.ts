@@ -11,6 +11,7 @@ import { UpdatePostDto } from './dto/update-post.dto'
 import { PaginationDto } from './dto/pagination.dto'
 import { Post } from './entities/post.entity'
 import { User } from '../users/entities/user.entity'
+import { S3UploadService } from '../common/services/s3-upload.service'
 
 @Injectable()
 export class PostsService {
@@ -18,7 +19,8 @@ export class PostsService {
     @InjectRepository(Post)
     private postsRepository: Repository<Post>,
     @InjectRepository(User)
-    private usersRepository: Repository<User>
+    private usersRepository: Repository<User>,
+    private s3UploadService: S3UploadService
   ) {}
 
   private formatPostResponse(post: Post) {
@@ -38,8 +40,30 @@ export class PostsService {
       throw new BadRequestException(`User with ID ${userId} not found`)
     }
 
+    // 이미지 URL이 있는 경우 temp에서 posts로 이동
+    let finalImageUrl = createPostDto.imageUrl
+    if (
+      createPostDto.imageUrl &&
+      createPostDto.imageUrl.includes('/images/temp/')
+    ) {
+      try {
+        // URL에서 key 추출 (예: "https://.../images/temp/filename.png" -> "/images/temp/filename.png")
+        const urlParts = createPostDto.imageUrl.split('/')
+        const key = `/${urlParts.slice(-2).join('/')}` // "/images/temp/filename.png"
+
+        const movedImage =
+          await this.s3UploadService.moveImageFromTempToPosts(key)
+        finalImageUrl = movedImage.url
+      } catch (error) {
+        throw new BadRequestException(
+          `이미지 이동에 실패했습니다: ${error.message}`
+        )
+      }
+    }
+
     const post = this.postsRepository.create({
       ...createPostDto,
+      imageUrl: finalImageUrl,
       userId: userId,
     })
     const savedPost = await this.postsRepository.save(post)

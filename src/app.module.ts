@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module'
 import { Post } from './posts/entities/post.entity'
 import { User } from './users/entities/user.entity'
 import { AuthModule } from './auth/auth.module'
+import { CommonModule } from './common/common.module'
 import { LandingGateway } from './gateway/landing.gateway'
 import { APP_INTERCEPTOR } from '@nestjs/core'
 import {
@@ -37,6 +38,7 @@ import {
     PostsModule,
     UsersModule,
     AuthModule,
+    CommonModule,
   ],
   controllers: [AppController],
   providers: [
