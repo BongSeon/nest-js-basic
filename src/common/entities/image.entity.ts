@@ -1,8 +1,11 @@
 import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm'
 import { BaseEntity } from './base.entity'
 import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator'
-import { join } from 'path'
-import { S3_POST_IMAGE_PATH } from '../const/path.const'
+import {
+  S3_POST_IMAGE_PATH,
+  S3_PROFILE_IMAGE_PATH,
+  S3_IMAGES_PATH,
+} from '../const/path.const'
 import { Transform } from 'class-transformer'
 import { Post } from '../../posts/entities/post.entity'
 import { ENV_AWS_S3_BUCKET_URL_KEY } from '../const/env-keys.const'
@@ -33,7 +36,9 @@ export class Image extends BaseEntity {
   @IsString()
   @Transform(({ value, obj }) => {
     if (obj.type === ImageType.POST_IMAGE) {
-      return `${join(process.env[ENV_AWS_S3_BUCKET_URL_KEY], S3_POST_IMAGE_PATH, value)}`
+      return `${process.env[ENV_AWS_S3_BUCKET_URL_KEY]}/${S3_IMAGES_PATH}/${S3_POST_IMAGE_PATH}/${value}`
+    } else if (obj.type === ImageType.PROFILE_IMAGE) {
+      return `${process.env[ENV_AWS_S3_BUCKET_URL_KEY]}/${S3_IMAGES_PATH}/${S3_PROFILE_IMAGE_PATH}/${value}`
     } else {
       return value
     }

@@ -156,7 +156,7 @@ export class S3UploadService {
 
       return {
         url: imageUrl,
-        key: `/${s3Key}`,
+        key: uniqueFileName,
       }
     } catch (error) {
       console.error('S3 Upload Error:', {
@@ -194,15 +194,14 @@ export class S3UploadService {
    * 이미지 이동 (temp에서 posts로)
    */
   async moveImageFromTempToPosts(
-    tempUrl: string
+    fileName: string
   ): Promise<{ url: string; key: string }> {
-    console.log('Moving image from temp to posts:', { tempUrl })
+    console.log('Moving image from temp to posts:', { fileName })
 
     // tempUrl에서 키 추출 (예: "/images/temp/filename.png" -> "images/temp/filename.png")
-    const tempKey = tempUrl.startsWith('/') ? tempUrl.substring(1) : tempUrl
+    const tempKey = `images/temp/${fileName}`
 
     // 새로운 키 생성 (temp -> posts)
-    const fileName = tempKey.split('/').pop() // filename.png
     const newKey = `${S3_IMAGES_PATH}/${S3_POST_IMAGE_PATH}/${fileName}`
 
     const copyCommand = new CopyObjectCommand({
@@ -223,7 +222,7 @@ export class S3UploadService {
 
       return {
         url: newUrl,
-        key: newKey,
+        key: fileName,
       }
     } catch (error) {
       console.error('S3 Move Error:', {
@@ -267,7 +266,7 @@ export class S3UploadService {
 
       return {
         url: presignedUrl,
-        key: s3Key,
+        key: uniqueFileName,
       }
     } catch (error) {
       throw new BadRequestException('서명된 URL 생성에 실패했습니다. ', error)

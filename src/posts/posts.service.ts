@@ -63,23 +63,21 @@ export class PostsService {
 
   async createPostImage(dto: CreatePostImageDto): Promise<any> {
     // 이미지 URL이 있는 경우 temp에서 posts로 이동
-    // let finalImageUrl = dto.path
-    // console.log('Creating post with imageUrl:', dto.path)
+    let finalImageUrl = dto.path
+    console.log('Creating post with imageUrl:', dto.path)
 
     // 이미지 레포지토리에 저장
     const result = await this.imagesRepository.save({ ...dto })
 
     // 파일 옮기기
-    if (dto.path && dto.path.includes('/images/temp/')) {
+    if (dto.path) {
       console.log('Image URL contains temp path, moving to posts...')
       try {
-        const tempUrl = dto.path // "/images/temp/filename.png"
-        // console.log('Temp URL to move:', tempUrl)
-
-        // const movedImage =
-        await this.s3UploadService.moveImageFromTempToPosts(tempUrl)
-        // finalImageUrl = movedImage.url
-        // console.log('Image moved successfully, new URL:', finalImageUrl)
+        const movedImage = await this.s3UploadService.moveImageFromTempToPosts(
+          dto.path
+        )
+        finalImageUrl = movedImage.url
+        console.log('Image moved successfully, new URL:', finalImageUrl)
       } catch (error) {
         console.error('Failed to move image:', error)
         throw new BadRequestException(
