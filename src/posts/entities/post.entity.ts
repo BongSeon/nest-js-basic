@@ -1,21 +1,10 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm'
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm'
 import { Expose, Exclude } from 'class-transformer'
 import { User } from '../../users/entities/user.entity'
+import { BaseEntity } from '../../common/entities/base.entity'
 
 @Entity()
-export class Post {
-  @PrimaryGeneratedColumn()
-  @Expose()
-  id: number
-
+export class Post extends BaseEntity {
   @Column({ length: 100 })
   @Expose()
   title: string
@@ -36,12 +25,4 @@ export class Post {
   @JoinColumn({ name: 'userId' })
   @Expose()
   user: User
-
-  @CreateDateColumn()
-  @Expose()
-  createdAt: Date
-
-  @UpdateDateColumn()
-  @Expose()
-  updatedAt: Date
 }

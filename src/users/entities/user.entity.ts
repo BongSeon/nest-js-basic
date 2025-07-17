@@ -1,17 +1,9 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm'
+import { Entity, Column } from 'typeorm'
 import { Exclude } from 'class-transformer'
+import { BaseEntity } from '../../common/entities/base.entity'
 
 @Entity()
-export class User {
-  @PrimaryGeneratedColumn()
-  id: number
-
+export class User extends BaseEntity {
   @Column({ length: 50, unique: true })
   username: string
 
@@ -35,12 +27,4 @@ export class User {
   @Column({ nullable: true })
   @Exclude()
   emailVerificationExpiresAt: Date
-
-  @CreateDateColumn()
-  @Exclude()
-  createdAt: Date
-
-  @UpdateDateColumn()
-  @Exclude()
-  updatedAt: Date
 }
