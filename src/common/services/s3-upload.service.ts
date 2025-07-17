@@ -7,7 +7,7 @@ import {
   CopyObjectCommand,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import * as crypto from 'crypto'
+import { v4 as uuid } from 'uuid'
 import {
   ENV_AWS_ACCESS_KEY_ID_KEY,
   ENV_AWS_SECRET_ACCESS_KEY_KEY,
@@ -116,10 +116,8 @@ export class S3UploadService {
    * 고유한 파일명 생성
    */
   private generateUniqueFileName(originalName: string): string {
-    const timestamp = Date.now()
-    const randomString = crypto.randomBytes(8).toString('hex')
     const extension = this.getFileExtension(originalName)
-    return `${timestamp}-${randomString}${extension}`
+    return `${uuid()}${extension}`
   }
 
   /**
