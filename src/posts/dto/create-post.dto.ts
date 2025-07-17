@@ -5,7 +5,7 @@ import { BasePostDto } from './base-post.dto'
 export class CreatePostDto extends PartialType(
   PickType(BasePostDto, ['title', 'content'] as const)
 ) {
+  @IsString({ each: true })
   @IsOptional()
-  @IsString()
-  imageUrl?: string
+  images: string[] = []
 }

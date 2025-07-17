@@ -11,7 +11,9 @@ import { UpdatePostDto } from './dto/update-post.dto'
 import { PaginationDto } from './dto/pagination.dto'
 import { Post } from './entities/post.entity'
 import { User } from '../users/entities/user.entity'
+import { Image } from 'src/common/entities/image.entity'
 import { S3UploadService } from '../common/services/s3-upload.service'
+import { CreatePostImageDto } from './image/dto/create-image.dto'
 
 @Injectable()
 export class PostsService {
@@ -20,6 +22,8 @@ export class PostsService {
     private postsRepository: Repository<Post>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Image)
+    private imagesRepository: Repository<Image>,
     private s3UploadService: S3UploadService
   ) {}
 
@@ -31,7 +35,7 @@ export class PostsService {
     }
   }
 
-  async create(createPostDto: CreatePostDto, userId: number): Promise<any> {
+  async createPost(createPostDto: CreatePostDto, userId: number): Promise<any> {
     // 사용자 존재 여부 확인
     const user = await this.usersRepository.findOne({
       where: { id: userId },
@@ -40,36 +44,9 @@ export class PostsService {
       throw new BadRequestException(`User with ID ${userId} not found`)
     }
 
-    // 이미지 URL이 있는 경우 temp에서 posts로 이동
-    let finalImageUrl = createPostDto.imageUrl
-    console.log('Creating post with imageUrl:', createPostDto.imageUrl)
-
-    if (
-      createPostDto.imageUrl &&
-      createPostDto.imageUrl.includes('/images/temp/')
-    ) {
-      console.log('Image URL contains temp path, moving to posts...')
-      try {
-        const tempUrl = createPostDto.imageUrl // "/images/temp/filename.png"
-        console.log('Temp URL to move:', tempUrl)
-
-        const movedImage =
-          await this.s3UploadService.moveImageFromTempToPosts(tempUrl)
-        finalImageUrl = movedImage.url
-        console.log('Image moved successfully, new URL:', finalImageUrl)
-      } catch (error) {
-        console.error('Failed to move image:', error)
-        throw new BadRequestException(
-          `이미지 이동에 실패했습니다: ${error.message}`
-        )
-      }
-    } else {
-      console.log('No temp image to move or imageUrl is null')
-    }
-
     const post = this.postsRepository.create({
       ...createPostDto,
-      // imageUrl: finalImageUrl,
+      images: [],
       userId: userId,
     })
     const savedPost = await this.postsRepository.save(post)
@@ -82,6 +59,38 @@ export class PostsService {
 
     // User 정보를 포함하여 반환하되 userId는 제외
     return this.formatPostResponse(postWithUser)
+  }
+
+  async createPostImage(dto: CreatePostImageDto): Promise<any> {
+    // 이미지 URL이 있는 경우 temp에서 posts로 이동
+    // let finalImageUrl = dto.path
+    // console.log('Creating post with imageUrl:', dto.path)
+
+    // 이미지 레포지토리에 저장
+    const result = await this.imagesRepository.save({ ...dto })
+
+    // 파일 옮기기
+    if (dto.path && dto.path.includes('/images/temp/')) {
+      console.log('Image URL contains temp path, moving to posts...')
+      try {
+        const tempUrl = dto.path // "/images/temp/filename.png"
+        // console.log('Temp URL to move:', tempUrl)
+
+        // const movedImage =
+        await this.s3UploadService.moveImageFromTempToPosts(tempUrl)
+        // finalImageUrl = movedImage.url
+        // console.log('Image moved successfully, new URL:', finalImageUrl)
+      } catch (error) {
+        console.error('Failed to move image:', error)
+        throw new BadRequestException(
+          `이미지 이동에 실패했습니다: ${error.message}`
+        )
+      }
+    } else {
+      console.log('No temp image to move or imageUrl is null')
+    }
+
+    return result
   }
 
   async findAll(
@@ -97,7 +106,7 @@ export class PostsService {
     const skip = (page - 1) * limit
 
     const [posts, total] = await this.postsRepository.findAndCount({
-      relations: ['user'],
+      relations: ['user', 'images'],
       order: {
         createdAt: 'DESC',
       },
@@ -122,7 +131,7 @@ export class PostsService {
   async findOne(id: number): Promise<any> {
     const post = await this.postsRepository.findOne({
       where: { id },
-      relations: ['user'],
+      relations: ['user', 'images'],
     })
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`)
@@ -139,7 +148,7 @@ export class PostsService {
   ): Promise<any> {
     const post = await this.postsRepository.findOne({
       where: { id },
-      relations: ['user'],
+      relations: ['user', 'images'],
     })
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`)

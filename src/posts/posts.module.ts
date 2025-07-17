@@ -5,13 +5,14 @@ import { PostsController } from './posts.controller'
 import { PostsService } from './posts.service'
 import { Post } from './entities/post.entity'
 import { User } from '../users/entities/user.entity'
+import { Image } from '../common/entities/image.entity'
 import { AuthModule } from '../auth/auth.module'
 import { UsersModule } from '../users/users.module'
 import { CommonModule } from '../common/common.module'
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, User]),
+    TypeOrmModule.forFeature([Post, User, Image]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'jwt-secret',
       signOptions: { expiresIn: '15m' },

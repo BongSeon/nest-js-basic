@@ -17,6 +17,7 @@ import { PaginationDto } from './dto/pagination.dto'
 import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { User } from 'src/users/decorator/user.decorator'
 import { UserPayload } from 'src/users/types/user-payload.interface'
+import { ImageType } from 'src/common/entities/image.entity'
 
 @Controller('posts')
 export class PostsController {
@@ -27,9 +28,21 @@ export class PostsController {
   async create(
     @User('id') userId: number,
     @Body()
-    createPostDto: CreatePostDto
+    dto: CreatePostDto
   ): Promise<any> {
-    return await this.postsService.create(createPostDto, userId)
+    const post = await this.postsService.createPost(dto, userId)
+
+    // 이미지가 생성되면서 이미지들이 생성한 post와 연결되게 됨
+    for (let i = 0; i < dto.images.length; i++) {
+      await this.postsService.createPostImage({
+        post: post,
+        order: i,
+        path: dto.images[i],
+        type: ImageType.POST_IMAGE,
+      })
+    }
+
+    return this.postsService.findOne(post.id)
   }
 
   @Get()

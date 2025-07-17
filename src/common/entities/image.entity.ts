@@ -5,6 +5,7 @@ import { join } from 'path'
 import { S3_POST_IMAGE_PATH } from '../const/path.const'
 import { Transform } from 'class-transformer'
 import { Post } from '../../posts/entities/post.entity'
+import { ENV_AWS_S3_BUCKET_URL_KEY } from '../const/env-keys.const'
 
 export enum ImageType {
   POST_IMAGE = 'POST_IMAGE',
@@ -32,15 +33,12 @@ export class Image extends BaseEntity {
   @IsString()
   @Transform(({ value, obj }) => {
     if (obj.type === ImageType.POST_IMAGE) {
-      return `/${join(S3_POST_IMAGE_PATH, value)}`
+      return `${join(process.env[ENV_AWS_S3_BUCKET_URL_KEY], S3_POST_IMAGE_PATH, value)}`
     } else {
       return value
     }
   })
   path: string
-
-  @Column({ nullable: true })
-  postId?: number
 
   @ManyToOne(() => Post, (post) => post.images)
   @JoinColumn({ name: 'postId' })
