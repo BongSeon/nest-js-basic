@@ -7,6 +7,7 @@ import { PostsModule } from './posts/posts.module'
 import { UsersModule } from './users/users.module'
 import { Post } from './posts/entities/post.entity'
 import { User } from './users/entities/user.entity'
+import { Image } from './common/entities/image.entity'
 import { AuthModule } from './auth/auth.module'
 import { CommonModule } from './common/common.module'
 import { LandingGateway } from './gateway/landing.gateway'
@@ -32,7 +33,7 @@ import {
       username: process.env[ENV_DB_USERNAME_KEY],
       password: process.env[ENV_DB_PASSWORD_KEY],
       database: process.env[ENV_DB_DATABASE_KEY],
-      entities: [Post, User],
+      entities: [Post, User, Image],
       synchronize: true, // 개발 환경에서만 사용. 프로덕션에서는 false로 설정
     }),
     PostsModule,

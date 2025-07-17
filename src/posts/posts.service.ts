@@ -69,7 +69,7 @@ export class PostsService {
 
     const post = this.postsRepository.create({
       ...createPostDto,
-      imageUrl: finalImageUrl,
+      // imageUrl: finalImageUrl,
       userId: userId,
     })
     const savedPost = await this.postsRepository.save(post)

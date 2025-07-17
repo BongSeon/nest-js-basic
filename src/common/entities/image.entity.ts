@@ -1,0 +1,48 @@
+import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm'
+import { BaseEntity } from './base.entity'
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator'
+import { join } from 'path'
+import { S3_POST_IMAGE_PATH } from '../const/path.const'
+import { Transform } from 'class-transformer'
+import { Post } from '../../posts/entities/post.entity'
+
+export enum ImageType {
+  POST_IMAGE = 'POST_IMAGE',
+  PROFILE_IMAGE = 'PROFILE_IMAGE',
+}
+
+@Entity()
+export class Image extends BaseEntity {
+  @Column({ default: 0 })
+  @IsInt()
+  @IsOptional()
+  order: number
+
+  // User: 사용자 프로필 이미지
+  // Post: 게시글 이미지
+  @Column({
+    type: 'varchar',
+    length: 20,
+  })
+  @IsEnum(ImageType)
+  type: ImageType
+
+  // obj: 이미지가 인스턴스화된 객체
+  @Column()
+  @IsString()
+  @Transform(({ value, obj }) => {
+    if (obj.type === ImageType.POST_IMAGE) {
+      return `/${join(S3_POST_IMAGE_PATH, value)}`
+    } else {
+      return value
+    }
+  })
+  path: string
+
+  @Column({ nullable: true })
+  postId?: number
+
+  @ManyToOne(() => Post, (post) => post.images)
+  @JoinColumn({ name: 'postId' })
+  post?: Post
+}
