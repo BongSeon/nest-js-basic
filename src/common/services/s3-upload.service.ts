@@ -237,6 +237,53 @@ export class S3UploadService {
   }
 
   /**
+   * 이미지 이동 (temp에서 profile로)
+   */
+  async moveImageFromTempToProfile(
+    fileName: string
+  ): Promise<{ url: string; key: string }> {
+    console.log('Moving image from temp to profile:', { fileName })
+
+    // tempUrl에서 키 추출 (예: "/images/temp/filename.png" -> "images/temp/filename.png")
+    const tempKey = `images/temp/${fileName}`
+
+    // 새로운 키 생성 (temp -> profile)
+    const newKey = `${S3_IMAGES_PATH}/${S3_PROFILE_IMAGE_PATH}/${fileName}`
+
+    const copyCommand = new CopyObjectCommand({
+      Bucket: this.bucketName,
+      CopySource: `${this.bucketName}/${tempKey}`,
+      Key: newKey,
+      ACL: 'public-read',
+    })
+
+    try {
+      await this.s3Client.send(copyCommand)
+
+      // 원본 파일 삭제
+      await this.deleteImage(tempKey)
+
+      const newUrl = `${this.bucketUrl}/${newKey}`
+
+      return {
+        url: newUrl,
+        key: fileName,
+      }
+    } catch (error) {
+      console.error('S3 Move Error:', {
+        error: error.message,
+        tempKey,
+        newKey,
+        bucketName: this.bucketName,
+        copySource: `${this.bucketName}/${tempKey}`,
+      })
+      throw new BadRequestException(
+        `이미지 이동에 실패했습니다: ${error.message}`
+      )
+    }
+  }
+
+  /**
    * 업로드용 서명된 URL 생성 (클라이언트에서 직접 업로드할 때 사용)
    */
   async generatePresignedUrl(

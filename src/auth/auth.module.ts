@@ -11,11 +11,13 @@ import {
 } from './guards/bearer-token.guard'
 import { TokenBlacklistService } from './services/token-blacklist.service'
 import { User } from '../users/entities/user.entity'
+import { Image } from '../common/entities/image.entity'
 import { UsersModule } from '../users/users.module'
+import { S3UploadService } from '../common/services/s3-upload.service'
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Image]),
     JwtModule.register({
       secret: process.env.JWT_ACCESS_SECRET || 'access-secret',
       signOptions: { expiresIn: '15m' },
@@ -30,6 +32,7 @@ import { UsersModule } from '../users/users.module'
     AccessTokenGuard,
     RefreshTokenGuard,
     TokenBlacklistService,
+    S3UploadService,
   ],
   exports: [
     AuthService,

@@ -13,8 +13,11 @@ import { User } from '../users/entities/user.entity'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { VerifyEmailDto } from './dto/verify-email.dto'
+import { UpdateProfileImageDto } from './dto/update-profile-image.dto'
 import { TokenBlacklistService } from './services/token-blacklist.service'
 import { MeDto } from '../users/dto/me.dto'
+import { Image } from '../common/entities/image.entity'
+import { S3UploadService } from '../common/services/s3-upload.service'
 import {
   ENV_HASH_ROUNDS_KEY,
   ENV_JWT_SECRET_KEY,
@@ -25,9 +28,12 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Image)
+    private imageRepository: Repository<Image>,
     private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private s3UploadService: S3UploadService
   ) {}
 
   /**
@@ -382,5 +388,66 @@ export class AuthService {
     meDto.createdAt = user.createdAt
 
     return meDto
+  }
+
+  /**
+   * 프로필 이미지 업데이트
+   * @param userId 사용자 ID
+   * @param updateProfileImageDto 프로필 이미지 업데이트 DTO
+   * @returns 업데이트된 사용자 정보
+   */
+  async updateProfileImage(
+    userId: number,
+    updateProfileImageDto: UpdateProfileImageDto
+  ): Promise<{ message: string; user: MeDto }> {
+    // 사용자 조회
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['profileImage'],
+    })
+
+    if (!user) {
+      throw new BadRequestException('사용자를 찾을 수 없습니다.')
+    }
+
+    // 기존 프로필 이미지가 있다면 삭제
+    if (user.profileImage) {
+      await this.s3UploadService.deleteImage(
+        `images/profile/${user.profileImage.path}`
+      )
+      await this.imageRepository.remove(user.profileImage)
+    }
+
+    // temp 폴더의 이미지를 profile 폴더로 이동
+    await this.s3UploadService.moveImageFromTempToProfile(
+      updateProfileImageDto.image
+    )
+
+    // 새로운 이미지 엔터티 생성
+    const newProfileImage = this.imageRepository.create({
+      path: updateProfileImageDto.image, // 파일명만 저장
+      type: 'PROFILE_IMAGE' as any,
+      user: user,
+    })
+
+    const savedImage = await this.imageRepository.save(newProfileImage)
+
+    // 사용자의 프로필 이미지 업데이트
+    user.profileImage = savedImage
+    await this.usersRepository.save(user)
+
+    // MeDto로 변환하여 반환
+    const meDto = new MeDto()
+    meDto.id = user.id
+    meDto.username = user.username
+    meDto.email = user.email
+    meDto.nickname = user.nickname
+    meDto.isEmailVerified = user.isEmailVerified
+    meDto.createdAt = user.createdAt
+
+    return {
+      message: '프로필 이미지가 업데이트되었습니다.',
+      user: meDto,
+    }
   }
 }

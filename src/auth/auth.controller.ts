@@ -11,6 +11,7 @@ import { Request } from 'express'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
 import { VerifyEmailDto } from './dto/verify-email.dto'
+import { UpdateProfileImageDto } from './dto/update-profile-image.dto'
 import { BasicTokenGuard } from './guards/basic-token.guard'
 import {
   AccessTokenGuard,
@@ -110,5 +111,20 @@ export class AuthController {
   @UseGuards(AccessTokenGuard)
   async getMe(@UserDecorator() user: UserPayload): Promise<MeDto> {
     return await this.authService.getMe(user)
+  }
+
+  /**
+   * 프로필 이미지 업데이트
+   */
+  @Post('me/profile')
+  @UseGuards(AccessTokenGuard)
+  async updateProfileImage(
+    @UserDecorator() user: UserPayload,
+    @Body() updateProfileImageDto: UpdateProfileImageDto
+  ) {
+    return await this.authService.updateProfileImage(
+      user.id,
+      updateProfileImageDto
+    )
   }
 }

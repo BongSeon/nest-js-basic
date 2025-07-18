@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm'
+import { Column, Entity, ManyToOne, OneToOne, JoinColumn } from 'typeorm'
 import { BaseEntity } from './base.entity'
 import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator'
 import {
@@ -8,6 +8,7 @@ import {
 } from '../const/path.const'
 import { Transform } from 'class-transformer'
 import { Post } from '../../posts/entities/post.entity'
+import { User } from '../../users/entities/user.entity'
 import { ENV_AWS_S3_BUCKET_URL_KEY } from '../const/env-keys.const'
 
 export enum ImageType {
@@ -48,4 +49,7 @@ export class Image extends BaseEntity {
   @ManyToOne(() => Post, (post) => post.images)
   @JoinColumn({ name: 'postId' })
   post?: Post
+
+  @OneToOne(() => User, (user) => user.profileImage)
+  user?: User
 }
