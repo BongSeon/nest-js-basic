@@ -20,8 +20,8 @@ import { Image, ImageType } from '../common/entities/image.entity'
 import { S3UploadService } from '../common/services/s3-upload.service'
 import { getImageUrl } from '../common/utils/image.util'
 import {
-  ENV_HASH_ROUNDS_KEY,
   ENV_JWT_SECRET_KEY,
+  ENV_HASH_ROUNDS_KEY,
 } from 'src/common/const/env-keys.const'
 
 @Injectable()
@@ -51,8 +51,18 @@ export class AuthService {
     }
 
     // 비밀번호 해싱
-    const hashRounds = this.configService.get<number>(ENV_HASH_ROUNDS_KEY, 10)
-    const hashedPassword = await bcrypt.hash(registerDto.password, hashRounds)
+    let hashedPassword: string
+
+    try {
+      const hashRounds = Number(
+        this.configService.get<string>(ENV_HASH_ROUNDS_KEY, '10')
+      )
+      const salt = await bcrypt.genSalt(hashRounds)
+      hashedPassword = await bcrypt.hash(registerDto.password, salt)
+    } catch (error) {
+      console.error('Password hashing error:', error)
+      throw new Error('비밀번호 해싱 중 오류가 발생했습니다.')
+    }
 
     // 6자리 랜덤 인증 코드 생성
     const verificationCode = this.generateVerificationCode()
@@ -198,6 +208,7 @@ export class AuthService {
         email: user.email,
         nickname: user.nickname,
         isEmailVerified: user.isEmailVerified,
+        role: user.role,
         profile: user.profile
           ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
           : undefined,
@@ -403,6 +414,7 @@ export class AuthService {
     meDto.email = user.email
     meDto.nickname = user.nickname
     meDto.isEmailVerified = user.isEmailVerified
+    meDto.role = user.role
     meDto.createdAt = user.createdAt
     meDto.profile = user.profile
       ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
@@ -464,6 +476,7 @@ export class AuthService {
     meDto.email = user.email
     meDto.nickname = user.nickname
     meDto.isEmailVerified = user.isEmailVerified
+    meDto.role = user.role
     meDto.createdAt = user.createdAt
     meDto.profile = user.profile
       ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)

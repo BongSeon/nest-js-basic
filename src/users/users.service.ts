@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { User } from './entities/user.entity'
+import { ENV_HASH_ROUNDS_KEY } from '../common/const/env-keys.const'
 
 @Injectable()
 export class UsersService {
@@ -33,8 +34,18 @@ export class UsersService {
     }
 
     // 비밀번호 해싱
-    const hashRounds = this.configService.get<number>('HASH_ROUNDS', 10)
-    const hashedPassword = await bcrypt.hash(createUserDto.password, hashRounds)
+    let hashedPassword: string
+
+    try {
+      const hashRounds = Number(
+        this.configService.get<string>(ENV_HASH_ROUNDS_KEY, '10')
+      )
+      const salt = await bcrypt.genSalt(hashRounds)
+      hashedPassword = await bcrypt.hash(createUserDto.password, salt)
+    } catch (error) {
+      console.error('Password hashing error:', error)
+      throw new Error('비밀번호 해싱 중 오류가 발생했습니다.')
+    }
 
     const user = this.usersRepository.create({
       ...createUserDto,
@@ -65,11 +76,16 @@ export class UsersService {
 
     // 비밀번호가 제공된 경우 해싱
     if (updateUserDto.password) {
-      const hashRounds = this.configService.get<number>('HASH_ROUNDS', 10)
-      updateUserDto.password = await bcrypt.hash(
-        updateUserDto.password,
-        hashRounds
-      )
+      try {
+        const hashRounds = Number(
+          this.configService.get<string>(ENV_HASH_ROUNDS_KEY, '10')
+        )
+        const salt = await bcrypt.genSalt(hashRounds)
+        updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt)
+      } catch (error) {
+        console.error('Password hashing error:', error)
+        throw new Error('비밀번호 해싱 중 오류가 발생했습니다.')
+      }
     }
 
     Object.assign(user, updateUserDto)

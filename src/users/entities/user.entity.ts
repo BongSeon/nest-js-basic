@@ -5,6 +5,11 @@ import { Image } from '../../common/entities/image.entity'
 import { getImageUrl } from '../../common/utils/image.util'
 import { ImageType } from '../../common/entities/image.entity'
 
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  USER = 'USER',
+}
+
 @Entity()
 export class User extends BaseEntity {
   @Column({ length: 50, unique: true })
@@ -30,6 +35,13 @@ export class User extends BaseEntity {
   @Column({ nullable: true })
   @Exclude()
   emailVerificationExpiresAt: Date
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.USER,
+  })
+  role: UserRole
 
   @OneToOne(() => Image, { nullable: true })
   @JoinColumn({ name: 'profileId' })

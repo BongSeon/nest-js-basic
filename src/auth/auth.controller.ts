@@ -101,6 +101,7 @@ export class AuthController {
       username: user.username,
       email: user.email,
       nickname: user.nickname,
+      role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       profile: user.profile

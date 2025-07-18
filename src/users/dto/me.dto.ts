@@ -8,6 +8,7 @@ export class MeDto extends PickType(User, [
   'email',
   'nickname',
   'isEmailVerified',
+  'role',
 ] as const) {
   @Expose()
   createdAt: Date

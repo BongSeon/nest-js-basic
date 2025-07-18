@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsEmail, Length } from 'class-validator'
+import {
+  IsString,
+  IsNotEmpty,
+  IsEmail,
+  Length,
+  IsEnum,
+  IsOptional,
+} from 'class-validator'
+import { UserRole } from '../entities/user.entity'
 
 export class BaseUserDto {
   @IsString()
@@ -25,4 +33,8 @@ export class BaseUserDto {
     message: 'password은 4자 이상 100자 이하여야 합니다.',
   })
   password: string
+
+  @IsEnum(UserRole)
+  @IsOptional()
+  role?: UserRole
 }
