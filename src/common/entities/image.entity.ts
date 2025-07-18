@@ -1,15 +1,10 @@
 import { Column, Entity, ManyToOne, OneToOne, JoinColumn } from 'typeorm'
 import { BaseEntity } from './base.entity'
 import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator'
-import {
-  S3_POST_IMAGE_PATH,
-  S3_PROFILE_IMAGE_PATH,
-  S3_IMAGES_PATH,
-} from '../const/path.const'
-import { Transform } from 'class-transformer'
+import { Exclude, Transform } from 'class-transformer'
 import { Post } from '../../posts/entities/post.entity'
 import { User } from '../../users/entities/user.entity'
-import { ENV_AWS_S3_BUCKET_URL_KEY } from '../const/env-keys.const'
+import { getImageUrl } from '../utils/image.util'
 
 export enum ImageType {
   POST_IMAGE = 'POST_IMAGE',
@@ -21,6 +16,7 @@ export class Image extends BaseEntity {
   @Column({ default: 0 })
   @IsInt()
   @IsOptional()
+  @Exclude()
   order: number
 
   // User: 사용자 프로필 이미지
@@ -30,19 +26,14 @@ export class Image extends BaseEntity {
     length: 20,
   })
   @IsEnum(ImageType)
+  @Exclude()
   type: ImageType
 
   // obj: 이미지가 인스턴스화된 객체
   @Column()
   @IsString()
   @Transform(({ value, obj }) => {
-    if (obj.type === ImageType.POST_IMAGE) {
-      return `${process.env[ENV_AWS_S3_BUCKET_URL_KEY]}/${S3_IMAGES_PATH}/${S3_POST_IMAGE_PATH}/${value}`
-    } else if (obj.type === ImageType.PROFILE_IMAGE) {
-      return `${process.env[ENV_AWS_S3_BUCKET_URL_KEY]}/${S3_IMAGES_PATH}/${S3_PROFILE_IMAGE_PATH}/${value}`
-    } else {
-      return value
-    }
+    return getImageUrl(value, obj.type)
   })
   path: string
 
@@ -50,6 +41,6 @@ export class Image extends BaseEntity {
   @JoinColumn({ name: 'postId' })
   post?: Post
 
-  @OneToOne(() => User, (user) => user.profileImage)
+  @OneToOne(() => User, (user) => user.profile)
   user?: User
 }

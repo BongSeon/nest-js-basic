@@ -14,6 +14,7 @@ import { User } from '../users/entities/user.entity'
 import { Image } from 'src/common/entities/image.entity'
 import { S3UploadService } from '../common/services/s3-upload.service'
 import { CreatePostImageDto } from './image/dto/create-image.dto'
+import { DEFAULT_POST_FIND_OPTIONS } from './const/default-post-find-options'
 
 @Injectable()
 export class PostsService {
@@ -54,7 +55,7 @@ export class PostsService {
     // user 관계를 포함하여 다시 조회
     const postWithUser = await this.postsRepository.findOne({
       where: { id: savedPost.id },
-      relations: ['user'],
+      relations: ['user', 'user.profile'],
     })
 
     // User 정보를 포함하여 반환하되 userId는 제외
@@ -104,10 +105,7 @@ export class PostsService {
     const skip = (page - 1) * limit
 
     const [posts, total] = await this.postsRepository.findAndCount({
-      relations: ['user', 'images'],
-      order: {
-        createdAt: 'DESC',
-      },
+      ...DEFAULT_POST_FIND_OPTIONS,
       skip,
       take: limit,
     })
@@ -129,7 +127,7 @@ export class PostsService {
   async findOne(id: number): Promise<any> {
     const post = await this.postsRepository.findOne({
       where: { id },
-      relations: ['user', 'images'],
+      ...DEFAULT_POST_FIND_OPTIONS,
     })
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`)
@@ -146,7 +144,7 @@ export class PostsService {
   ): Promise<any> {
     const post = await this.postsRepository.findOne({
       where: { id },
-      relations: ['user', 'images'],
+      ...DEFAULT_POST_FIND_OPTIONS,
     })
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`)
@@ -179,7 +177,7 @@ export class PostsService {
   async remove(id: number, userId: number): Promise<void> {
     const post = await this.postsRepository.findOne({
       where: { id },
-      relations: ['user'],
+      relations: ['user', 'user.profile'],
     })
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`)

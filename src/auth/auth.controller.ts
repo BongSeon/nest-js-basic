@@ -20,6 +20,8 @@ import {
 import { UserPayload } from '../users/types/user-payload.interface'
 import { User as UserDecorator } from '../users/decorator/user.decorator'
 import { MeDto } from '../users/dto/me.dto'
+import { getImageUrl } from '../common/utils/image.util'
+import { ImageType } from '../common/entities/image.entity'
 
 @Controller('auth')
 export class AuthController {
@@ -101,6 +103,9 @@ export class AuthController {
       nickname: user.nickname,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      profile: user.profile
+        ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
+        : undefined,
     }
   }
 

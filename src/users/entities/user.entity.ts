@@ -1,7 +1,9 @@
 import { Entity, Column, OneToOne, JoinColumn } from 'typeorm'
-import { Exclude } from 'class-transformer'
+import { Exclude, Transform } from 'class-transformer'
 import { BaseEntity } from '../../common/entities/base.entity'
 import { Image } from '../../common/entities/image.entity'
+import { getImageUrl } from '../../common/utils/image.util'
+import { ImageType } from '../../common/entities/image.entity'
 
 @Entity()
 export class User extends BaseEntity {
@@ -30,6 +32,12 @@ export class User extends BaseEntity {
   emailVerificationExpiresAt: Date
 
   @OneToOne(() => Image, { nullable: true })
-  @JoinColumn({ name: 'profileImageId' })
-  profileImage?: Image
+  @JoinColumn({ name: 'profileId' })
+  @Transform(({ value }) => {
+    if (value) {
+      return getImageUrl(value.path, ImageType.PROFILE_IMAGE)
+    }
+    return null
+  })
+  profile?: Image
 }

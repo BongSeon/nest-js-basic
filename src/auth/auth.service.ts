@@ -16,8 +16,9 @@ import { VerifyEmailDto } from './dto/verify-email.dto'
 import { UpdateProfileImageDto } from './dto/update-profile-image.dto'
 import { TokenBlacklistService } from './services/token-blacklist.service'
 import { MeDto } from '../users/dto/me.dto'
-import { Image } from '../common/entities/image.entity'
+import { Image, ImageType } from '../common/entities/image.entity'
 import { S3UploadService } from '../common/services/s3-upload.service'
+import { getImageUrl } from '../common/utils/image.util'
 import {
   ENV_HASH_ROUNDS_KEY,
   ENV_JWT_SECRET_KEY,
@@ -191,7 +192,16 @@ export class AuthService {
     return {
       accessToken: this.signToken(user, 'access'),
       refreshToken: this.signToken(user, 'refresh'),
-      user,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        nickname: user.nickname,
+        isEmailVerified: user.isEmailVerified,
+        profile: user.profile
+          ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
+          : undefined,
+      },
     }
   }
 
@@ -228,7 +238,10 @@ export class AuthService {
     password: string
   ): Promise<User> {
     // 1) 사용자가 존재하는지 확인 (username)
-    const user = await this.usersRepository.findOne({ where: { username } })
+    const user = await this.usersRepository.findOne({
+      where: { username },
+      relations: ['profile'],
+    })
     if (!user) {
       throw new UnauthorizedException('Invalid credentials')
     }
@@ -257,6 +270,7 @@ export class AuthService {
       // DB에서 사용자 찾기
       const user = await this.usersRepository.findOne({
         where: { id: payload.sub },
+        relations: ['profile'],
       })
 
       if (!user) {
@@ -290,6 +304,7 @@ export class AuthService {
     // DB에서 사용자 확인
     const user = await this.usersRepository.findOne({
       where: { id: userId },
+      relations: ['profile'],
     })
 
     if (!user) {
@@ -306,6 +321,7 @@ export class AuthService {
         username: user.username,
         email: user.email,
         nickname: user.nickname,
+        profile: user.profile,
       },
     }
   }
@@ -367,10 +383,12 @@ export class AuthService {
     if (query.id) {
       user = await this.usersRepository.findOne({
         where: { id: query.id as number },
+        relations: ['profile'],
       })
     } else if (query.username) {
       user = await this.usersRepository.findOne({
         where: { username: query.username },
+        relations: ['profile'],
       })
     }
 
@@ -386,6 +404,9 @@ export class AuthService {
     meDto.nickname = user.nickname
     meDto.isEmailVerified = user.isEmailVerified
     meDto.createdAt = user.createdAt
+    meDto.profile = user.profile
+      ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
+      : undefined
 
     return meDto
   }
@@ -403,7 +424,7 @@ export class AuthService {
     // 사용자 조회
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      relations: ['profileImage'],
+      relations: ['profile'],
     })
 
     if (!user) {
@@ -411,11 +432,11 @@ export class AuthService {
     }
 
     // 기존 프로필 이미지가 있다면 삭제
-    if (user.profileImage) {
+    if (user.profile) {
       await this.s3UploadService.deleteImage(
-        `images/profile/${user.profileImage.path}`
+        `images/profile/${user.profile.path}`
       )
-      await this.imageRepository.remove(user.profileImage)
+      await this.imageRepository.remove(user.profile)
     }
 
     // temp 폴더의 이미지를 profile 폴더로 이동
@@ -433,7 +454,7 @@ export class AuthService {
     const savedImage = await this.imageRepository.save(newProfileImage)
 
     // 사용자의 프로필 이미지 업데이트
-    user.profileImage = savedImage
+    user.profile = savedImage
     await this.usersRepository.save(user)
 
     // MeDto로 변환하여 반환
@@ -444,6 +465,9 @@ export class AuthService {
     meDto.nickname = user.nickname
     meDto.isEmailVerified = user.isEmailVerified
     meDto.createdAt = user.createdAt
+    meDto.profile = user.profile
+      ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
+      : undefined
 
     return {
       message: '프로필 이미지가 업데이트되었습니다.',
