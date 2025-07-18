@@ -9,6 +9,7 @@ import {
   BearerTokenGuard,
   RefreshTokenGuard,
 } from './guards/bearer-token.guard'
+import { RoleGuard } from './guards/role.guard'
 import { TokenBlacklistService } from './services/token-blacklist.service'
 import { User } from '../users/entities/user.entity'
 import { Image } from '../common/entities/image.entity'
@@ -31,6 +32,7 @@ import { S3UploadService } from '../common/services/s3-upload.service'
     BearerTokenGuard,
     AccessTokenGuard,
     RefreshTokenGuard,
+    RoleGuard,
     TokenBlacklistService,
     S3UploadService,
   ],
@@ -40,6 +42,7 @@ import { S3UploadService } from '../common/services/s3-upload.service'
     BearerTokenGuard,
     AccessTokenGuard,
     RefreshTokenGuard,
+    RoleGuard,
     TokenBlacklistService,
     JwtModule,
   ],

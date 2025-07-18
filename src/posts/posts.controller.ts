@@ -74,7 +74,7 @@ export class PostsController {
     @Param('id', ParseIntPipe) id: number,
     @User() user: UserPayload
   ): Promise<void> {
-    const userId = user.id
-    await this.postsService.remove(id, userId)
+    // 삭제 권한 체크용 role을 전달
+    await this.postsService.remove(id, user.id, user.role)
   }
 }

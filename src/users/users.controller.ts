@@ -7,13 +7,19 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common'
 import { UsersService } from './users.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
-import { User } from './entities/user.entity'
+import { User, UserRole } from './entities/user.entity'
+import { AccessTokenGuard } from 'src/auth/guards/bearer-token.guard'
+import { RoleGuard } from 'src/auth/guards/role.guard'
+import { Roles } from 'src/auth/decorators/roles.decorator'
 
 @Controller('users')
+@UseGuards(AccessTokenGuard, RoleGuard)
+@Roles(UserRole.ADMIN)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

@@ -10,7 +10,7 @@ import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { PaginationDto } from './dto/pagination.dto'
 import { Post } from './entities/post.entity'
-import { User } from '../users/entities/user.entity'
+import { User, UserRole } from '../users/entities/user.entity'
 import { Image } from 'src/common/entities/image.entity'
 import { S3UploadService } from '../common/services/s3-upload.service'
 import { CreatePostImageDto } from './image/dto/create-image.dto'
@@ -174,7 +174,7 @@ export class PostsService {
     return this.formatPostResponse(updatedPost)
   }
 
-  async remove(id: number, userId: number): Promise<void> {
+  async remove(id: number, userId: number, userRole: UserRole): Promise<void> {
     const post = await this.postsRepository.findOne({
       where: { id },
       relations: ['user', 'user.profile'],
@@ -184,7 +184,7 @@ export class PostsService {
     }
 
     // 게시글 작성자만 삭제할 수 있도록 권한 체크
-    if (post.userId !== userId) {
+    if (post.userId !== userId && userRole !== UserRole.ADMIN) {
       throw new ForbiddenException('You can only delete your own posts')
     }
 

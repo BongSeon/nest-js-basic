@@ -220,10 +220,14 @@ export class AuthService {
    * 4. signToken
    *  - 3번 과정에서 필요한 AccessToken과 RefreshToken을 sign하는 로직
    */
-  signToken(user: Pick<User, 'username' | 'id'>, type: 'access' | 'refresh') {
+  signToken(
+    user: Pick<User, 'username' | 'id' | 'role'>,
+    type: 'access' | 'refresh'
+  ) {
     const payload = {
       username: user.username,
       sub: user.id,
+      role: user.role,
       type: type,
     }
 

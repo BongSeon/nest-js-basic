@@ -14,6 +14,7 @@ export const User = createParamDecorator(
     const user: UserPayload = {
       id: payload.sub,
       username: payload.username,
+      role: payload.role,
     }
 
     if (!user) {
