@@ -240,15 +240,19 @@ export class S3UploadService {
    * 이미지 이동 (temp에서 profile로)
    */
   async moveImageFromTempToProfile(
-    fileName: string
+    fileName: string,
+    userId: number
   ): Promise<{ url: string; key: string }> {
-    console.log('Moving image from temp to profile:', { fileName })
+    console.log('Moving image from temp to profile:', { fileName, userId })
 
     // tempUrl에서 키 추출 (예: "/images/temp/filename.png" -> "images/temp/filename.png")
     const tempKey = `images/temp/${fileName}`
 
-    // 새로운 키 생성 (temp -> profile)
-    const newKey = `${S3_IMAGES_PATH}/${S3_PROFILE_IMAGE_PATH}/${fileName}`
+    // 사용자 그룹 폴더 생성
+    const userGroup = this.getUserGroup(userId)
+
+    // 새로운 키 생성 (temp -> profile/userGroup/userId/fileName)
+    const newKey = `${S3_IMAGES_PATH}/${S3_PROFILE_IMAGE_PATH}/${userGroup}/${userId}/${fileName}`
 
     const copyCommand = new CopyObjectCommand({
       Bucket: this.bucketName,
@@ -284,18 +288,49 @@ export class S3UploadService {
   }
 
   /**
+   * 사용자별 프로필 이미지 삭제
+   */
+  async deleteProfileImage(userId: number, fileName: string): Promise<void> {
+    const userGroup = this.getUserGroup(userId)
+    const imageKey = `${S3_IMAGES_PATH}/${S3_PROFILE_IMAGE_PATH}/${userGroup}/${userId}/${fileName}`
+
+    try {
+      await this.deleteImage(imageKey)
+    } catch (error) {
+      console.error('Profile image deletion error:', error)
+      // 이미지가 존재하지 않는 경우는 무시
+    }
+  }
+
+  /**
+   * userId로 그룹 폴더명을 반환
+   * ex. 1 -> 0~100, 114 -> 100~200, ..
+   */
+  private getUserGroup(userId: number): string {
+    return `${Math.floor(userId / 100) * 100}~${Math.floor(userId / 100) * 100 + 100}`
+  }
+
+  /**
    * 업로드용 서명된 URL 생성 (클라이언트에서 직접 업로드할 때 사용)
    */
   async generatePresignedUrl(
     fileName: string,
     folder: 'profile' | 'posts' = 'posts',
-    contentType: string
+    contentType: string,
+    userId?: number
   ): Promise<{ url: string; key: string }> {
     const uniqueFileName = this.generateUniqueFileName(fileName)
-    const s3Key = this.generateS3Key(
-      folder === 'profile' ? S3_PROFILE_IMAGE_PATH : S3_POST_IMAGE_PATH,
-      uniqueFileName
-    )
+
+    let s3Key: string
+    if (folder === 'profile' && userId) {
+      const userGroup = this.getUserGroup(userId)
+      s3Key = `${S3_IMAGES_PATH}/${S3_PROFILE_IMAGE_PATH}/${userGroup}/${userId}/${uniqueFileName}`
+    } else {
+      s3Key = this.generateS3Key(
+        folder === 'profile' ? S3_PROFILE_IMAGE_PATH : S3_POST_IMAGE_PATH,
+        uniqueFileName
+      )
+    }
 
     const uploadCommand = new PutObjectCommand({
       Bucket: this.bucketName,

@@ -105,7 +105,7 @@ export class AuthController {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       profile: user.profile
-        ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
+        ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE, user.id)
         : undefined,
     }
   }

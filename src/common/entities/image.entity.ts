@@ -1,5 +1,12 @@
-import { Column, Entity, ManyToOne, OneToOne, JoinColumn } from 'typeorm'
-import { BaseEntity } from './base.entity'
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  OneToOne,
+  JoinColumn,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+} from 'typeorm'
 import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator'
 import { Exclude, Transform } from 'class-transformer'
 import { Post } from '../../posts/entities/post.entity'
@@ -12,7 +19,10 @@ export enum ImageType {
 }
 
 @Entity()
-export class Image extends BaseEntity {
+export class Image {
+  @PrimaryGeneratedColumn()
+  id: number
+
   @Column({ default: 0 })
   @IsInt()
   @IsOptional()
@@ -33,9 +43,15 @@ export class Image extends BaseEntity {
   @Column()
   @IsString()
   @Transform(({ value, obj }) => {
+    if (obj.type === ImageType.PROFILE_IMAGE && obj.user?.id) {
+      return getImageUrl(value, obj.type, obj.user.id)
+    }
     return getImageUrl(value, obj.type)
   })
   path: string
+
+  @CreateDateColumn()
+  createdAt: Date
 
   @ManyToOne(() => Post, (post) => post.images)
   @JoinColumn({ name: 'postId' })

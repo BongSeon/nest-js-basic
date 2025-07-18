@@ -45,9 +45,9 @@ export class User extends BaseEntity {
 
   @OneToOne(() => Image, { nullable: true })
   @JoinColumn({ name: 'profileId' })
-  @Transform(({ value }) => {
+  @Transform(({ value, obj }) => {
     if (value) {
-      return getImageUrl(value.path, ImageType.PROFILE_IMAGE)
+      return getImageUrl(value.path, ImageType.PROFILE_IMAGE, obj.id)
     }
     return null
   })

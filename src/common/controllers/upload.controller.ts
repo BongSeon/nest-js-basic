@@ -46,7 +46,8 @@ export class UploadController {
   async generatePresignedUrl(
     @Query('fileName') fileName: string,
     @Query('folder') folder: 'profile' | 'posts' = 'posts',
-    @Query('contentType') contentType: string
+    @Query('contentType') contentType: string,
+    @Query('userId') userId?: string
   ) {
     if (!fileName) {
       throw new BadRequestException('파일명이 필요합니다.')
@@ -59,7 +60,8 @@ export class UploadController {
     const result = await this.s3UploadService.generatePresignedUrl(
       fileName,
       folder,
-      contentType
+      contentType,
+      userId ? parseInt(userId) : undefined
     )
 
     return {

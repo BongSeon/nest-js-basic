@@ -210,7 +210,7 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified,
         role: user.role,
         profile: user.profile
-          ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
+          ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE, user.id)
           : undefined,
       },
     }
@@ -421,7 +421,7 @@ export class AuthService {
     meDto.role = user.role
     meDto.createdAt = user.createdAt
     meDto.profile = user.profile
-      ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
+      ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE, user.id)
       : undefined
 
     return meDto
@@ -449,15 +449,14 @@ export class AuthService {
 
     // 기존 프로필 이미지가 있다면 삭제
     if (user.profile) {
-      await this.s3UploadService.deleteImage(
-        `images/profile/${user.profile.path}`
-      )
+      await this.s3UploadService.deleteProfileImage(userId, user.profile.path)
       await this.imageRepository.remove(user.profile)
     }
 
-    // temp 폴더의 이미지를 profile 폴더로 이동
+    // temp 폴더의 이미지를 profile 폴더로 이동 (사용자별 폴더 구조)
     await this.s3UploadService.moveImageFromTempToProfile(
-      updateProfileImageDto.image
+      updateProfileImageDto.image,
+      userId
     )
 
     // 새로운 이미지 엔터티 생성
@@ -483,7 +482,7 @@ export class AuthService {
     meDto.role = user.role
     meDto.createdAt = user.createdAt
     meDto.profile = user.profile
-      ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE)
+      ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE, userId)
       : undefined
 
     return {
