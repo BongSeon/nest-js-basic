@@ -57,6 +57,6 @@ export class Image {
   @JoinColumn({ name: 'postId' })
   post?: Post
 
-  @OneToOne(() => User, (user) => user.profile)
+  @OneToOne(() => User, (user) => user.profile, { onDelete: 'CASCADE' })
   user?: User
 }

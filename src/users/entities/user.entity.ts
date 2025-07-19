@@ -43,7 +43,7 @@ export class User extends BaseEntity {
   })
   role: UserRole
 
-  @OneToOne(() => Image, { nullable: true })
+  @OneToOne(() => Image, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'profileId' })
   @Transform(({ value, obj }) => {
     if (value) {
