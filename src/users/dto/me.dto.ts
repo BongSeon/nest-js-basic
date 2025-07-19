@@ -15,4 +15,7 @@ export class MeDto extends PickType(User, [
 
   @Expose()
   profile?: string
+
+  @Expose()
+  cover?: string
 }

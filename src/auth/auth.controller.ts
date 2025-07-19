@@ -107,6 +107,9 @@ export class AuthController {
       profile: user.profile
         ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE, user.id)
         : undefined,
+      cover: user.cover
+        ? getImageUrl(user.cover.path, ImageType.COVER_IMAGE, user.id)
+        : undefined,
     }
   }
 

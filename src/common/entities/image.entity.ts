@@ -16,6 +16,7 @@ import { getImageUrl } from '../utils/image.util'
 export enum ImageType {
   POST_IMAGE = 'POST_IMAGE',
   PROFILE_IMAGE = 'PROFILE_IMAGE',
+  COVER_IMAGE = 'COVER_IMAGE',
 }
 
 @Entity()
@@ -43,7 +44,11 @@ export class Image {
   @Column()
   @IsString()
   @Transform(({ value, obj }) => {
-    if (obj.type === ImageType.PROFILE_IMAGE && obj.user?.id) {
+    if (
+      obj.user?.id &&
+      (obj.type === ImageType.PROFILE_IMAGE ||
+        obj.type === ImageType.COVER_IMAGE)
+    ) {
       return getImageUrl(value, obj.type, obj.user.id)
     }
     return getImageUrl(value, obj.type)

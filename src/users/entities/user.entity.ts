@@ -52,4 +52,14 @@ export class User extends BaseEntity {
     return null
   })
   profile?: Image
+
+  @OneToOne(() => Image, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'coverId' })
+  @Transform(({ value, obj }) => {
+    if (value) {
+      return getImageUrl(value.path, ImageType.PROFILE_IMAGE, obj.id)
+    }
+    return null
+  })
+  cover?: Image
 }

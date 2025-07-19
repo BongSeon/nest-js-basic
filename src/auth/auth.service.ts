@@ -23,6 +23,7 @@ import {
   ENV_JWT_SECRET_KEY,
   ENV_HASH_ROUNDS_KEY,
 } from 'src/common/const/env-keys.const'
+import { DEFAULT_USER_FIND_OPTIONS } from 'src/users/const/default-user-find-options'
 
 @Injectable()
 export class AuthService {
@@ -212,6 +213,9 @@ export class AuthService {
         profile: user.profile
           ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE, user.id)
           : undefined,
+        cover: user.cover
+          ? getImageUrl(user.cover.path, ImageType.COVER_IMAGE, user.id)
+          : undefined,
       },
     }
   }
@@ -255,7 +259,7 @@ export class AuthService {
     // 1) 사용자가 존재하는지 확인 (username)
     const user = await this.usersRepository.findOne({
       where: { username },
-      relations: ['profile'],
+      ...DEFAULT_USER_FIND_OPTIONS,
     })
     if (!user) {
       throw new UnauthorizedException('Invalid credentials')
@@ -285,7 +289,7 @@ export class AuthService {
       // DB에서 사용자 찾기
       const user = await this.usersRepository.findOne({
         where: { id: payload.sub },
-        relations: ['profile'],
+        ...DEFAULT_USER_FIND_OPTIONS,
       })
 
       if (!user) {
@@ -319,7 +323,7 @@ export class AuthService {
     // DB에서 사용자 확인
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      relations: ['profile'],
+      ...DEFAULT_USER_FIND_OPTIONS,
     })
 
     if (!user) {
@@ -337,6 +341,7 @@ export class AuthService {
         email: user.email,
         nickname: user.nickname,
         profile: user.profile,
+        cover: user.cover,
       },
     }
   }
@@ -398,12 +403,12 @@ export class AuthService {
     if (query.id) {
       user = await this.usersRepository.findOne({
         where: { id: query.id as number },
-        relations: ['profile'],
+        ...DEFAULT_USER_FIND_OPTIONS,
       })
     } else if (query.username) {
       user = await this.usersRepository.findOne({
         where: { username: query.username },
-        relations: ['profile'],
+        ...DEFAULT_USER_FIND_OPTIONS,
       })
     }
 
@@ -423,6 +428,9 @@ export class AuthService {
     meDto.profile = user.profile
       ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE, user.id)
       : undefined
+    meDto.cover = user.cover
+      ? getImageUrl(user.cover.path, ImageType.COVER_IMAGE, user.id)
+      : undefined
 
     return meDto
   }
@@ -436,21 +444,28 @@ export class AuthService {
   async updateProfileImage(
     userId: number,
     updateProfileImageDto: UpdateProfileImageDto
-  ): Promise<{ message: string; user: MeDto }> {
+  ): Promise<{ message: string }> {
     // 사용자 조회
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      relations: ['profile'],
     })
 
     if (!user) {
       throw new BadRequestException('사용자를 찾을 수 없습니다.')
     }
 
-    // 기존 프로필 이미지가 있다면 삭제
-    if (user.profile) {
-      await this.s3UploadService.deleteProfileImage(userId, user.profile.path)
-      await this.imageRepository.remove(user.profile)
+    if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
+      // 기존 프로필 이미지가 있다면 삭제
+      if (user.profile) {
+        await this.s3UploadService.deleteProfileImage(userId, user.profile.path)
+        await this.imageRepository.remove(user.profile)
+      }
+    } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
+      // 기존 커버 이미지가 있다면 삭제
+      if (user.cover) {
+        await this.s3UploadService.deleteProfileImage(userId, user.cover.path)
+        await this.imageRepository.remove(user.cover)
+      }
     }
 
     // temp 폴더의 이미지를 profile 폴더로 이동 (사용자별 폴더 구조)
@@ -462,32 +477,22 @@ export class AuthService {
     // 새로운 이미지 엔터티 생성
     const newProfileImage = this.imageRepository.create({
       path: updateProfileImageDto.image, // 파일명만 저장
-      type: 'PROFILE_IMAGE' as any,
+      type: updateProfileImageDto.type,
       user: user,
     })
 
     const savedImage = await this.imageRepository.save(newProfileImage)
 
     // 사용자의 프로필 이미지 업데이트
-    user.profile = savedImage
+    if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
+      user.profile = savedImage
+    } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
+      user.cover = savedImage
+    }
     await this.usersRepository.save(user)
-
-    // MeDto로 변환하여 반환
-    const meDto = new MeDto()
-    meDto.id = user.id
-    meDto.username = user.username
-    meDto.email = user.email
-    meDto.nickname = user.nickname
-    meDto.isEmailVerified = user.isEmailVerified
-    meDto.role = user.role
-    meDto.createdAt = user.createdAt
-    meDto.profile = user.profile
-      ? getImageUrl(user.profile.path, ImageType.PROFILE_IMAGE, userId)
-      : undefined
 
     return {
       message: '프로필 이미지가 업데이트되었습니다.',
-      user: meDto,
     }
   }
 }

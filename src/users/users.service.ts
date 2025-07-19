@@ -11,6 +11,7 @@ import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { User } from './entities/user.entity'
 import { ENV_HASH_ROUNDS_KEY } from '../common/const/env-keys.const'
+import { DEFAULT_USER_FIND_OPTIONS } from './const/default-user-find-options'
 
 @Injectable()
 export class UsersService {
@@ -56,14 +57,14 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     return await this.usersRepository.find({
-      relations: ['profile'],
+      ...DEFAULT_USER_FIND_OPTIONS,
     })
   }
 
   async findOne(id: number): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['profile'],
+      ...DEFAULT_USER_FIND_OPTIONS,
     })
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`)
