@@ -436,7 +436,7 @@ export class AuthService {
   }
 
   /**
-   * 프로필 이미지 업데이트
+   * 프로필 이미지 또는 커버 이미지 업데이트
    * @param userId 사용자 ID
    * @param updateProfileImageDto 프로필 이미지 업데이트 DTO
    * @returns 업데이트된 사용자 정보
@@ -445,60 +445,88 @@ export class AuthService {
     userId: number,
     updateProfileImageDto: UpdateProfileImageDto
   ): Promise<{ message: string }> {
-    // 사용자 조회
+    // 사용자 조회 (관계 포함)
     const user = await this.usersRepository.findOne({
       where: { id: userId },
+      relations: ['profile', 'cover'],
     })
 
     if (!user) {
       throw new BadRequestException('사용자를 찾을 수 없습니다.')
     }
 
+    let imageTypeName: string = ''
+    let existingImage: Image | null = null
+
+    // 이미지 타입에 따른 처리
     if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
-      // 기존 프로필 이미지가 있다면 삭제
-      if (user.profile) {
-        await this.s3UploadService.deleteProfileImage(userId, user.profile.path)
-        await this.imageRepository.remove(user.profile)
+      imageTypeName = '프로필 이미지'
+      existingImage = user.profile
+    } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
+      imageTypeName = '커버 이미지'
+      existingImage = user.cover
+    } else {
+      throw new BadRequestException('지원하지 않는 이미지 타입입니다.')
+    }
+
+    try {
+      // 기존 이미지가 있다면 삭제
+      if (existingImage) {
+        console.log(`기존 ${imageTypeName} 삭제 중:`, existingImage.path)
+
+        // S3에서 이미지 파일 삭제
+        await this.s3UploadService.deleteProfileImage(
+          userId,
+          existingImage.path
+        )
+
+        // 데이터베이스에서 이미지 엔터티 삭제
+        await this.imageRepository.remove(existingImage)
+
+        console.log(`기존 ${imageTypeName} 삭제 완료`)
       }
-    } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
-      // 기존 커버 이미지가 있다면 삭제
-      if (user.cover) {
-        await this.s3UploadService.deleteProfileImage(userId, user.cover.path)
-        await this.imageRepository.remove(user.cover)
+
+      // temp 폴더의 이미지를 profile 폴더로 이동 (사용자별 폴더 구조)
+      console.log(
+        `새로운 ${imageTypeName} 업로드 중:`,
+        updateProfileImageDto.image
+      )
+      await this.s3UploadService.moveImageFromTempToProfile(
+        updateProfileImageDto.image,
+        userId
+      )
+
+      // 새로운 이미지 엔터티 생성
+      const newImage = this.imageRepository.create({
+        path: updateProfileImageDto.image, // 파일명만 저장
+        type: updateProfileImageDto.type,
+      })
+
+      // 이미지 타입에 따라 올바른 관계 설정
+      if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
+        newImage.profileUser = user
+      } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
+        newImage.coverUser = user
       }
-    }
 
-    // temp 폴더의 이미지를 profile 폴더로 이동 (사용자별 폴더 구조)
-    await this.s3UploadService.moveImageFromTempToProfile(
-      updateProfileImageDto.image,
-      userId
-    )
+      const savedImage = await this.imageRepository.save(newImage)
 
-    // 새로운 이미지 엔터티 생성
-    const newImage = this.imageRepository.create({
-      path: updateProfileImageDto.image, // 파일명만 저장
-      type: updateProfileImageDto.type,
-    })
+      // 사용자의 이미지 참조 업데이트
+      if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
+        user.profile = savedImage
+      } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
+        user.cover = savedImage
+      }
+      await this.usersRepository.save(user)
 
-    // 이미지 타입에 따라 올바른 관계 설정
-    if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
-      newImage.profileUser = user
-    } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
-      newImage.coverUser = user
-    }
+      console.log(`${imageTypeName} 업데이트 완료`)
 
-    const savedImage = await this.imageRepository.save(newImage)
-
-    // 사용자의 프로필 이미지 업데이트
-    if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
-      user.profile = savedImage
-    } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
-      user.cover = savedImage
-    }
-    await this.usersRepository.save(user)
-
-    return {
-      message: '프로필 이미지가 업데이트되었습니다.',
+      return {
+        message: `${imageTypeName}가 업데이트되었습니다.`,
+      }
+    } catch (error) {
+      console.error(`${imageTypeName} 업데이트 중 오류 발생:`, error)
+      throw new BadRequestException(`${imageTypeName} 업데이트에 실패했습니다.`)
     }
   }
 
