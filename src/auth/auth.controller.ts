@@ -6,6 +6,7 @@ import {
   Req,
   UnauthorizedException,
   Get,
+  Delete,
 } from '@nestjs/common'
 import { Request } from 'express'
 import { AuthService } from './auth.service'
@@ -123,7 +124,7 @@ export class AuthController {
   }
 
   /**
-   * 프로필 이미지 업데이트
+   * 프로필 이미지/커버 이미지 업데이트
    */
   @Post('me/profile')
   @UseGuards(AccessTokenGuard)
@@ -134,6 +135,24 @@ export class AuthController {
     return await this.authService.updateProfileImage(
       user.id,
       updateProfileImageDto
+    )
+  }
+
+  @Delete('me/profile')
+  @UseGuards(AccessTokenGuard)
+  async deleteProfileImage(@UserDecorator() user: UserPayload) {
+    return await this.authService.deleteProfileImage(
+      user.id,
+      ImageType.PROFILE_IMAGE
+    )
+  }
+
+  @Delete('me/cover')
+  @UseGuards(AccessTokenGuard)
+  async deleteCoverImage(@UserDecorator() user: UserPayload) {
+    return await this.authService.deleteProfileImage(
+      user.id,
+      ImageType.COVER_IMAGE
     )
   }
 }

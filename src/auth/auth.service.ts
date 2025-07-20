@@ -475,13 +475,19 @@ export class AuthService {
     )
 
     // 새로운 이미지 엔터티 생성
-    const newProfileImage = this.imageRepository.create({
+    const newImage = this.imageRepository.create({
       path: updateProfileImageDto.image, // 파일명만 저장
       type: updateProfileImageDto.type,
-      user: user,
     })
 
-    const savedImage = await this.imageRepository.save(newProfileImage)
+    // 이미지 타입에 따라 올바른 관계 설정
+    if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
+      newImage.profileUser = user
+    } else if (updateProfileImageDto.type === ImageType.COVER_IMAGE) {
+      newImage.coverUser = user
+    }
+
+    const savedImage = await this.imageRepository.save(newImage)
 
     // 사용자의 프로필 이미지 업데이트
     if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
@@ -493,6 +499,65 @@ export class AuthService {
 
     return {
       message: '프로필 이미지가 업데이트되었습니다.',
+    }
+  }
+
+  /**
+   * 프로필 이미지 또는 커버 이미지 삭제
+   * @param userId 사용자 ID
+   * @param imageType 삭제할 이미지 타입 (PROFILE_IMAGE 또는 COVER_IMAGE)
+   * @returns 삭제 결과 메시지
+   */
+  async deleteProfileImage(
+    userId: number,
+    imageType: ImageType.PROFILE_IMAGE | ImageType.COVER_IMAGE
+  ): Promise<{ message: string }> {
+    // 사용자 조회 (관계 포함)
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['profile', 'cover'],
+    })
+
+    if (!user) {
+      throw new BadRequestException('사용자를 찾을 수 없습니다.')
+    }
+
+    let imageToDelete: Image | null = null
+    let imageTypeName: string = ''
+
+    if (imageType === ImageType.PROFILE_IMAGE) {
+      imageToDelete = user.profile
+      imageTypeName = '프로필 이미지'
+    } else if (imageType === ImageType.COVER_IMAGE) {
+      imageToDelete = user.cover
+      imageTypeName = '커버 이미지'
+    }
+
+    if (!imageToDelete) {
+      throw new BadRequestException(`${imageTypeName}가 존재하지 않습니다.`)
+    }
+
+    try {
+      // S3에서 이미지 파일 삭제
+      await this.s3UploadService.deleteProfileImage(userId, imageToDelete.path)
+
+      // 데이터베이스에서 이미지 엔터티 삭제
+      await this.imageRepository.remove(imageToDelete)
+
+      // 사용자의 이미지 참조 제거
+      if (imageType === ImageType.PROFILE_IMAGE) {
+        user.profile = null
+      } else if (imageType === ImageType.COVER_IMAGE) {
+        user.cover = null
+      }
+      await this.usersRepository.save(user)
+
+      return {
+        message: `${imageTypeName}가 삭제되었습니다.`,
+      }
+    } catch (error) {
+      console.error('이미지 삭제 중 오류 발생:', error)
+      throw new BadRequestException(`${imageTypeName} 삭제에 실패했습니다.`)
     }
   }
 }

@@ -57,7 +57,7 @@ export class User extends BaseEntity {
   @JoinColumn({ name: 'coverId' })
   @Transform(({ value, obj }) => {
     if (value) {
-      return getImageUrl(value.path, ImageType.PROFILE_IMAGE, obj.id)
+      return getImageUrl(value.path, ImageType.COVER_IMAGE, obj.id)
     }
     return null
   })

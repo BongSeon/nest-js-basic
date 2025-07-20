@@ -44,12 +44,11 @@ export class Image {
   @Column()
   @IsString()
   @Transform(({ value, obj }) => {
-    if (
-      obj.user?.id &&
-      (obj.type === ImageType.PROFILE_IMAGE ||
-        obj.type === ImageType.COVER_IMAGE)
-    ) {
-      return getImageUrl(value, obj.type, obj.user.id)
+    if (obj.profileUser?.id && obj.type === ImageType.PROFILE_IMAGE) {
+      return getImageUrl(value, obj.type, obj.profileUser.id)
+    }
+    if (obj.coverUser?.id && obj.type === ImageType.COVER_IMAGE) {
+      return getImageUrl(value, obj.type, obj.coverUser.id)
     }
     return getImageUrl(value, obj.type)
   })
@@ -63,5 +62,8 @@ export class Image {
   post?: Post
 
   @OneToOne(() => User, (user) => user.profile, { onDelete: 'CASCADE' })
-  user?: User
+  profileUser?: User
+
+  @OneToOne(() => User, (user) => user.cover, { onDelete: 'CASCADE' })
+  coverUser?: User
 }
