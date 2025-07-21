@@ -3,6 +3,11 @@ export const ENV_JWT_SECRET_KEY = 'JWT_SECRET'
 // JWT 토큰 해시 라운드 수
 export const ENV_HASH_ROUNDS_KEY = 'HASH_ROUNDS'
 
+// 프로토콜
+export const PROTOCOL = 'http'
+// 호스트
+export const HOST = 'localhost:3000'
+
 // DB 호스트
 export const ENV_DB_HOST_KEY = 'DB_HOST'
 // DB 포트

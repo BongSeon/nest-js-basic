@@ -13,7 +13,7 @@ import {
 import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
-import { PaginationDto } from './dto/pagination.dto'
+import { PaginatePostDto } from './dto/post-pagination.dto'
 import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { User } from 'src/users/decorator/user.decorator'
 import { UserPayload } from 'src/users/types/user-payload.interface'
@@ -42,19 +42,19 @@ export class PostsController {
       })
     }
 
-    return this.postsService.findOne(post.id)
+    return this.postsService.getPost(post.id)
   }
 
   @Get()
   @UseGuards(AccessTokenGuard)
-  async findAll(@Query() paginationDto: PaginationDto): Promise<any> {
-    return await this.postsService.findAll(paginationDto)
+  async getPosts(@Query() paginationDto: PaginatePostDto): Promise<any> {
+    return await this.postsService.getPosts(paginationDto)
   }
 
   @Get(':id')
   @UseGuards(AccessTokenGuard)
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<any> {
-    return await this.postsService.findOne(id)
+  async getPost(@Param('id', ParseIntPipe) id: number): Promise<any> {
+    return await this.postsService.getPost(id)
   }
 
   @Patch(':id')

@@ -8,13 +8,15 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
-import { PaginationDto } from './dto/pagination.dto'
+// import { PaginationDto } from './dto/post-pagination.dto'
 import { Post } from './entities/post.entity'
 import { User, UserRole } from '../users/entities/user.entity'
 import { Image } from 'src/common/entities/image.entity'
 import { S3UploadService } from '../common/services/s3-upload.service'
+import { CommonService } from 'src/common/services/common.service'
 import { CreatePostImageDto } from './image/dto/create-image.dto'
 import { DEFAULT_POST_FIND_OPTIONS } from './const/default-post-find-options'
+import { PaginatePostDto } from './dto/post-pagination.dto'
 
 @Injectable()
 export class PostsService {
@@ -25,7 +27,8 @@ export class PostsService {
     private usersRepository: Repository<User>,
     @InjectRepository(Image)
     private imagesRepository: Repository<Image>,
-    private s3UploadService: S3UploadService
+    private s3UploadService: S3UploadService,
+    private commonService: CommonService
   ) {}
 
   private formatPostResponse(post: Post) {
@@ -92,39 +95,20 @@ export class PostsService {
     return result
   }
 
-  async findAll(
-    paginationDto: PaginationDto = { page: 1, limit: 10 }
-  ): Promise<{
-    items: any[]
-    total: number
-    page: number
-    limit: number
-    totalPages: number
-  }> {
-    const { page = 1, limit = 10 } = paginationDto
-    const skip = (page - 1) * limit
-
-    const [posts, total] = await this.postsRepository.findAndCount({
-      ...DEFAULT_POST_FIND_OPTIONS,
-      skip,
-      take: limit,
-    })
-
-    const totalPages = Math.ceil(total / limit)
-
-    // 각 Post의 User 정보를 필터링하고 userId 제거
-    const formattedPosts = posts.map((post) => this.formatPostResponse(post))
+  async getPosts(dto: PaginatePostDto) {
+    const result = await this.paginatePosts(dto)
 
     return {
-      items: formattedPosts,
-      total,
-      page,
-      limit,
-      totalPages,
+      ...result,
+      items: result.items.map((post) => this.formatPostResponse(post)),
     }
   }
 
-  async findOne(id: number): Promise<any> {
+  async paginatePosts(dto: PaginatePostDto) {
+    return this.commonService.paginate(dto, this.postsRepository, {}, 'posts')
+  }
+
+  async getPost(id: number): Promise<any> {
     const post = await this.postsRepository.findOne({
       where: { id },
       ...DEFAULT_POST_FIND_OPTIONS,

@@ -12,6 +12,7 @@ import {
 } from '../auth/guards/bearer-token.guard'
 import { TokenBlacklistService } from '../auth/services/token-blacklist.service'
 import { AuthService } from '../auth/auth.service'
+import { CommonService } from './services/common.service'
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { AuthService } from '../auth/auth.service'
     RefreshTokenGuard,
     TokenBlacklistService,
     AuthService,
+    CommonService,
   ],
-  exports: [S3UploadService],
+  exports: [S3UploadService, CommonService],
 })
 export class CommonModule {}

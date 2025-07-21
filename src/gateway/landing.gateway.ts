@@ -27,7 +27,7 @@ export class LandingGateway
       // 'Bearer <token>'
       const rawToken = client.handshake.auth?.token
       // 'Bearer ' 제거
-      const authToken = rawToken.substring(7)
+      const authToken = rawToken?.substring(7)
 
       let user: User | null = null
 
