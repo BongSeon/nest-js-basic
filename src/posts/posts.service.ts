@@ -55,7 +55,7 @@ export class PostsService {
     // user 관계를 포함하여 다시 조회
     const postWithUser = await this.postsRepository.findOne({
       where: { id: savedPost.id },
-      relations: ['user', 'user.profile'],
+      relations: ['user', 'user.profile', 'user.cover'],
     })
 
     // User 정보를 포함하여 반환하되 userId는 제외
@@ -177,7 +177,7 @@ export class PostsService {
   async remove(id: number, userId: number, userRole: UserRole): Promise<void> {
     const post = await this.postsRepository.findOne({
       where: { id },
-      relations: ['user', 'user.profile'],
+      relations: ['user', 'user.profile', 'user.cover'],
     })
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`)
