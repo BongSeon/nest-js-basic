@@ -42,19 +42,25 @@ export class PostsController {
       })
     }
 
-    return this.postsService.getPost(post.id)
+    return this.postsService.getPost(post.id, userId)
   }
 
   @Get()
   @UseGuards(AccessTokenGuard)
-  async getPosts(@Query() paginationDto: PaginatePostDto): Promise<any> {
-    return await this.postsService.getPosts(paginationDto)
+  async getPosts(
+    @Query() paginationDto: PaginatePostDto,
+    @User('id') userId: number
+  ): Promise<any> {
+    return await this.postsService.getPosts(paginationDto, userId)
   }
 
   @Get(':id')
   @UseGuards(AccessTokenGuard)
-  async getPost(@Param('id', ParseIntPipe) id: number): Promise<any> {
-    return await this.postsService.getPost(id)
+  async getPost(
+    @Param('id', ParseIntPipe) id: number,
+    @User('id') userId: number
+  ): Promise<any> {
+    return await this.postsService.getPost(id, userId)
   }
 
   @Patch(':id')

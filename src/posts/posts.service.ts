@@ -39,7 +39,6 @@ export class PostsService {
       ...postWithoutUserId,
     }
   }
-
   async createPost(createPostDto: CreatePostDto, userId: number): Promise<any> {
     // 사용자 존재 여부 확인
     const user = await this.usersRepository.findOne({
@@ -96,20 +95,46 @@ export class PostsService {
     return result
   }
 
-  async getPosts(dto: PaginatePostDto) {
+  async getPosts(dto: PaginatePostDto, currentUserId?: number) {
     const result = await this.paginatePosts(dto)
+
+    // 현재 사용자의 좋아요 정보를 한 번의 쿼리로 가져오기
+    let likedPostIds: number[] = []
+    if (currentUserId && result.items.length > 0) {
+      const postIds = result.items.map((post) => post.id)
+      const likedPosts = await this.dataSource
+        .createQueryBuilder()
+        .select('postId')
+        .from('post_like', 'pl')
+        .where('pl.userId = :userId', { userId: currentUserId })
+        .andWhere('pl.postId IN (:...postIds)', { postIds })
+        .getRawMany()
+
+      likedPostIds = likedPosts.map((like) => like.postId)
+    }
 
     return {
       ...result,
-      items: result.items.map((post) => this.formatPostResponse(post)),
+      items: result.items.map((post) => {
+        const postWithLiked = {
+          ...post,
+          liked: likedPostIds.includes(post.id) ? true : false,
+        }
+        return this.formatPostResponse(postWithLiked)
+      }),
     }
   }
 
   async paginatePosts(dto: PaginatePostDto) {
-    return this.commonService.paginate(dto, this.postsRepository, {}, 'posts')
+    return this.commonService.paginate(
+      dto,
+      this.postsRepository,
+      DEFAULT_POST_FIND_OPTIONS,
+      'posts'
+    )
   }
 
-  async getPost(id: number): Promise<any> {
+  async getPost(id: number, currentUserId?: number): Promise<any> {
     const post = await this.postsRepository.findOne({
       where: { id },
       ...DEFAULT_POST_FIND_OPTIONS,
@@ -118,8 +143,23 @@ export class PostsService {
       throw new NotFoundException(`Post with ID ${id} not found`)
     }
 
-    // User 정보를 필터링하고 userId 제거하여 반환
-    return this.formatPostResponse(post)
+    // 현재 사용자의 좋아요 여부를 확인
+    let isLiked = false
+    if (currentUserId) {
+      const likedPost = await this.dataSource
+        .createQueryBuilder()
+        .select('postId')
+        .from('post_like', 'pl')
+        .where('pl.userId = :userId', { userId: currentUserId })
+        .andWhere('pl.postId = :postId', { postId: id })
+        .getRawOne()
+
+      isLiked = !!likedPost
+    }
+
+    // liked 정보를 포함하여 반환
+    const postWithLiked = { ...post, liked: isLiked ? true : false }
+    return this.formatPostResponse(postWithLiked)
   }
 
   async update(
@@ -153,10 +193,10 @@ export class PostsService {
     }
 
     Object.assign(post, updatePostDto)
-    const updatedPost = await this.postsRepository.save(post)
+    await this.postsRepository.save(post)
 
-    // User 정보를 필터링하고 userId 제거하여 반환
-    return this.formatPostResponse(updatedPost)
+    // 업데이트된 게시글을 liked 정보와 함께 다시 조회
+    return this.getPost(id, userId)
   }
 
   async remove(id: number, userId: number, userRole: UserRole): Promise<void> {
@@ -230,13 +270,8 @@ export class PostsService {
 
       await queryRunner.commitTransaction()
 
-      // 업데이트된 포스트 반환
-      const updatedPost = await this.postsRepository.findOne({
-        where: { id: postId },
-        ...DEFAULT_POST_FIND_OPTIONS,
-      })
-
-      return this.formatPostResponse(updatedPost)
+      // 업데이트된 포스트를 liked 정보와 함께 반환
+      return this.getPost(postId, userId)
     } catch (error) {
       await queryRunner.rollbackTransaction()
       throw error
@@ -291,13 +326,8 @@ export class PostsService {
 
       await queryRunner.commitTransaction()
 
-      // 업데이트된 포스트 반환
-      const updatedPost = await this.postsRepository.findOne({
-        where: { id: postId },
-        ...DEFAULT_POST_FIND_OPTIONS,
-      })
-
-      return this.formatPostResponse(updatedPost)
+      // 업데이트된 포스트를 liked 정보와 함께 반환
+      return this.getPost(postId, userId)
     } catch (error) {
       await queryRunner.rollbackTransaction()
       throw error
