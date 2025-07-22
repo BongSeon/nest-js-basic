@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { Repository, DataSource } from 'typeorm'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 // import { PaginationDto } from './dto/post-pagination.dto'
@@ -28,7 +28,8 @@ export class PostsService {
     @InjectRepository(Image)
     private imagesRepository: Repository<Image>,
     private s3UploadService: S3UploadService,
-    private commonService: CommonService
+    private commonService: CommonService,
+    private dataSource: DataSource
   ) {}
 
   private formatPostResponse(post: Post) {
@@ -173,5 +174,135 @@ export class PostsService {
     }
 
     await this.postsRepository.remove(post)
+  }
+
+  async likePost(postId: number, userId: number): Promise<any> {
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+
+    try {
+      // 포스트 존재 여부 확인
+      const post = await queryRunner.manager.findOne(Post, {
+        where: { id: postId },
+        relations: ['likedBy'],
+      })
+      if (!post) {
+        throw new NotFoundException(`Post with ID ${postId} not found`)
+      }
+
+      // 사용자 존재 여부 확인
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+      })
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`)
+      }
+
+      // 이미 좋아요 했는지 확인
+      const existingLike = await queryRunner.manager
+        .createQueryBuilder()
+        .select()
+        .from('post_like', 'pl')
+        .where('pl.postId = :postId', { postId })
+        .andWhere('pl.userId = :userId', { userId })
+        .getRawOne()
+
+      if (existingLike) {
+        throw new BadRequestException('You have already liked this post')
+      }
+
+      // post_like 테이블에 관계 추가
+      await queryRunner.manager
+        .createQueryBuilder()
+        .insert()
+        .into('post_like')
+        .values({ postId, userId })
+        .execute()
+
+      // likeCount 증가
+      await queryRunner.manager
+        .createQueryBuilder()
+        .update(Post)
+        .set({ likeCount: () => 'likeCount + 1' })
+        .where('id = :postId', { postId })
+        .execute()
+
+      await queryRunner.commitTransaction()
+
+      // 업데이트된 포스트 반환
+      const updatedPost = await this.postsRepository.findOne({
+        where: { id: postId },
+        ...DEFAULT_POST_FIND_OPTIONS,
+      })
+
+      return this.formatPostResponse(updatedPost)
+    } catch (error) {
+      await queryRunner.rollbackTransaction()
+      throw error
+    } finally {
+      await queryRunner.release()
+    }
+  }
+
+  async unlikePost(postId: number, userId: number): Promise<any> {
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
+
+    try {
+      // 포스트 존재 여부 확인
+      const post = await queryRunner.manager.findOne(Post, {
+        where: { id: postId },
+      })
+      if (!post) {
+        throw new NotFoundException(`Post with ID ${postId} not found`)
+      }
+
+      // 좋아요 관계 확인
+      const existingLike = await queryRunner.manager
+        .createQueryBuilder()
+        .select()
+        .from('post_like', 'pl')
+        .where('pl.postId = :postId', { postId })
+        .andWhere('pl.userId = :userId', { userId })
+        .getRawOne()
+
+      if (!existingLike) {
+        throw new BadRequestException('You have not liked this post')
+      }
+
+      // post_like 테이블에서 관계 제거
+      await queryRunner.manager
+        .createQueryBuilder()
+        .delete()
+        .from('post_like')
+        .where('postId = :postId', { postId })
+        .andWhere('userId = :userId', { userId })
+        .execute()
+
+      // likeCount 감소
+      await queryRunner.manager
+        .createQueryBuilder()
+        .update(Post)
+        .set({ likeCount: () => 'likeCount - 1' })
+        .where('id = :postId', { postId })
+        .execute()
+
+      await queryRunner.commitTransaction()
+
+      // 업데이트된 포스트 반환
+      const updatedPost = await this.postsRepository.findOne({
+        where: { id: postId },
+        ...DEFAULT_POST_FIND_OPTIONS,
+      })
+
+      return this.formatPostResponse(updatedPost)
+    } catch (error) {
+      await queryRunner.rollbackTransaction()
+      throw error
+    } finally {
+      await queryRunner.release()
+    }
   }
 }

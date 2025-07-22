@@ -1,4 +1,4 @@
-import { Entity, Column, OneToOne, JoinColumn } from 'typeorm'
+import { Entity, Column, OneToOne, JoinColumn, ManyToMany } from 'typeorm'
 import { Exclude, Transform } from 'class-transformer'
 import { BaseEntity } from '../../common/entities/base.entity'
 import { Image } from '../../common/entities/image.entity'
@@ -62,4 +62,7 @@ export class User extends BaseEntity {
     return null
   })
   cover?: Image
+
+  @ManyToMany('Post', 'likedBy')
+  likedPosts: any[]
 }

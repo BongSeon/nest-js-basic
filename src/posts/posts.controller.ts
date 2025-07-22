@@ -77,4 +77,22 @@ export class PostsController {
     // 삭제 권한 체크용 role을 전달
     await this.postsService.remove(id, user.id, user.role)
   }
+
+  @Post(':id/like')
+  @UseGuards(AccessTokenGuard)
+  async likePost(
+    @Param('id', ParseIntPipe) postId: number,
+    @User('id') userId: number
+  ): Promise<any> {
+    return await this.postsService.likePost(postId, userId)
+  }
+
+  @Delete(':id/like')
+  @UseGuards(AccessTokenGuard)
+  async unlikePost(
+    @Param('id', ParseIntPipe) postId: number,
+    @User('id') userId: number
+  ): Promise<any> {
+    return await this.postsService.unlikePost(postId, userId)
+  }
 }
