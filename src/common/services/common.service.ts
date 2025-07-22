@@ -74,7 +74,7 @@ export class CommonService {
       for (const key of Object.keys(dto)) {
         if (dto[key]) {
           if (
-            key !== 'where__id__more_than' &&
+            key !== 'where__id__greater_than' &&
             key !== 'where__id__less_than'
           ) {
             nextUrl.searchParams.append(key, dto[key])
@@ -85,7 +85,7 @@ export class CommonService {
       let key = null
 
       if (dto.order__createdAt === 'ASC') {
-        key = 'where__id__more_than'
+        key = 'where__id__greater_than'
       } else {
         key = 'where__id__less_than'
       }
@@ -117,8 +117,8 @@ export class CommonService {
      *    2개의 값으로 나뉘는지 확인한다.
      *    3-1) 3개의 값으로 나뉘는 경우 첫번째 값은 키워드, 두번째 값은 키값, 세번째 값은 유틸리티
      *         FILTER_MAP에서 해당되는 operator(함수)를 찾아서 적용한다.
-     *         ex) where__id__more_than
-     *             ['where', 'id', 'more_than'] -> id > 10
+     *         ex) where__id__greater_than
+     *             ['where', 'id', 'greater_than'] -> id > 10
      *    3-2) 2개의 값으로 나뉘는 경우 첫번째 값은 키워드, 두번째 값은 키값
      *         ex) where__id
      *         ex) ['where', 'id'] -> id = 10
@@ -129,12 +129,12 @@ export class CommonService {
     let order: FindOptionsOrder<T> = {}
 
     for (const [key, value] of Object.entries(dto)) {
-      // key -> where__id__more_than
+      // key -> where__id__greater_than
       // value -> 10
       if (key.startsWith('where__')) {
         where = { ...where, ...this.parseWhereFilter(key, value) }
       } else if (key.startsWith('order__')) {
-        order = { ...order }
+        order = { ...order, ...this.parseWhereFilter(key, value) }
       }
     }
 
@@ -170,12 +170,12 @@ export class CommonService {
       /**
        * 길이가 3일 경우는 Typeorm 유틸리티 적용이 필요한 경우다.
        *
-       * where__id__more_than의 경우
+       * where__id__greater_than의 경우
        * where는 버리고 두번째 값은 키값, 세번째 값은 유틸리티 함수다.
        */
-      // ['where', 'id', 'more_than']
+      // ['where', 'id', 'greater_than']
       const field = split[1] // id
-      const operator = split[2] // more_than
+      const operator = split[2] // greater_than
 
       // where__id__between = 3,4
       // split의 특징 대상 문자가 존재하지 않으면 길이가 무조건 1이다.

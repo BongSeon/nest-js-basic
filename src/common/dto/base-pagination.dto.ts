@@ -23,7 +23,7 @@ export class BasePaginateDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  where__id__more_than?: number
+  where__id__greater_than?: number
 
   @IsOptional()
   @IsString()
