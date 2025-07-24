@@ -79,9 +79,16 @@ export class PostsController {
   async remove(
     @Param('id', ParseIntPipe) id: number,
     @User() user: UserPayload
-  ): Promise<void> {
+  ): Promise<any> {
     // 삭제 권한 체크용 role을 전달
+    console.log('id', id)
+    console.log('user', user)
     await this.postsService.remove(id, user.id, user.role)
+
+    return {
+      data: { id },
+      message: '게시물이 성공적으로 삭제되었습니다.',
+    }
   }
 
   @Post(':id/like')

@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { ValidationPipe } from '@nestjs/common'
 import { json, urlencoded } from 'express'
+import { ResponseInterceptor } from './common/interceptors/response.interceptor'
+import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
@@ -17,6 +19,12 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
+
+  // 전역 Exception Filter 등록
+  app.useGlobalFilters(new HttpExceptionFilter())
+
+  // 전역 인터셉터 등록
+  app.useGlobalInterceptors(new ResponseInterceptor())
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -199,20 +199,53 @@ export class PostsService {
   }
 
   async remove(id: number, userId: number, userRole: UserRole): Promise<void> {
-    const post = await this.postsRepository.findOne({
-      where: { id },
-      relations: ['user', 'user.profile', 'user.cover'],
-    })
-    if (!post) {
-      throw new NotFoundException(`Post with ID ${id} not found`)
-    }
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
 
-    // 게시글 작성자만 삭제할 수 있도록 권한 체크
-    if (post.userId !== userId && userRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('You can only delete your own posts')
-    }
+    try {
+      const post = await queryRunner.manager.findOne(Post, {
+        where: { id },
+        relations: ['user', 'user.profile', 'user.cover', 'images'],
+      })
+      if (!post) {
+        throw new NotFoundException(`Post with ID ${id} not found`)
+      }
 
-    await this.postsRepository.remove(post)
+      // 게시글 작성자만 삭제할 수 있도록 권한 체크
+      if (post.userId !== userId && userRole !== UserRole.ADMIN) {
+        throw new ForbiddenException('You can only delete your own posts')
+      }
+
+      // 1. 좋아요 관계 삭제 (post_like 테이블)
+      await queryRunner.manager
+        .createQueryBuilder()
+        .delete()
+        .from('post_like')
+        .where('postId = :postId', { postId: id })
+        .execute()
+
+      // 2. 게시물 이미지 삭제
+      if (post.images && post.images.length > 0) {
+        await queryRunner.manager
+          .createQueryBuilder()
+          .delete()
+          .from(Image)
+          .where('postId = :postId', { postId: id })
+          .execute()
+      }
+
+      // 3. 게시물 삭제
+      await queryRunner.manager.remove(Post, post)
+
+      await queryRunner.commitTransaction()
+    } catch (error) {
+      await queryRunner.rollbackTransaction()
+      console.error('게시물 삭제 중 오류 발생:', error)
+      throw error
+    } finally {
+      await queryRunner.release()
+    }
   }
 
   async likePost(postId: number, userId: number): Promise<any> {

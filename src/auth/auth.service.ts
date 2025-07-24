@@ -237,7 +237,7 @@ export class AuthService {
 
     const secret = this.configService.get<string>(ENV_JWT_SECRET_KEY)
 
-    const expiresIn = type === 'access' ? '10m' : '1h'
+    const expiresIn = type === 'access' ? '2m' : '1h'
 
     return this.jwtService.sign(payload, {
       secret,
