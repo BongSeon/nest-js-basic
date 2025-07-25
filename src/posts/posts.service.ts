@@ -5,15 +5,13 @@ import {
   ForbiddenException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository, DataSource } from 'typeorm'
+import { Repository, DataSource, QueryRunner } from 'typeorm'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { Post } from './entities/post.entity'
 import { User, UserRole } from '../users/entities/user.entity'
 import { Image } from 'src/common/entities/image.entity'
-import { S3UploadService } from '../common/services/s3-upload.service'
 import { CommonService } from 'src/common/services/common.service'
-import { CreatePostImageDto } from './image/dto/create-image.dto'
 import { DEFAULT_POST_FIND_OPTIONS } from './const/default-post-find-options'
 import { PaginatePostDto } from './dto/post-pagination.dto'
 
@@ -26,7 +24,6 @@ export class PostsService {
     private usersRepository: Repository<User>,
     @InjectRepository(Image)
     private imagesRepository: Repository<Image>,
-    private s3UploadService: S3UploadService,
     private commonService: CommonService,
     private dataSource: DataSource
   ) {}
@@ -38,7 +35,18 @@ export class PostsService {
       ...postWithoutUserId,
     }
   }
-  async createPost(createPostDto: CreatePostDto, userId: number): Promise<any> {
+
+  getRepository(qr?: QueryRunner) {
+    return qr ? qr.manager.getRepository<Post>(Post) : this.postsRepository
+  }
+
+  async createPost(
+    createPostDto: CreatePostDto,
+    userId: number,
+    qr?: QueryRunner
+  ): Promise<any> {
+    const repository = this.getRepository(qr)
+
     // 사용자 존재 여부 확인
     const user = await this.usersRepository.findOne({
       where: { id: userId },
@@ -47,51 +55,21 @@ export class PostsService {
       throw new BadRequestException(`User with ID ${userId} not found`)
     }
 
-    const post = this.postsRepository.create({
+    const post = repository.create({
       ...createPostDto,
       images: [],
       userId: userId,
     })
-    const savedPost = await this.postsRepository.save(post)
+    const savedPost = await repository.save(post)
 
     // user 관계를 포함하여 다시 조회
-    const postWithUser = await this.postsRepository.findOne({
+    const postWithUser = await repository.findOne({
       where: { id: savedPost.id },
       relations: ['user', 'user.profile', 'user.cover'],
     })
 
     // User 정보를 포함하여 반환하되 userId는 제외
     return this.formatPostResponse(postWithUser)
-  }
-
-  async createPostImage(dto: CreatePostImageDto): Promise<any> {
-    // 이미지 URL이 있는 경우 temp에서 posts로 이동
-    let finalImageUrl = dto.path
-    console.log('Creating post with imageUrl:', dto.path)
-
-    // 이미지 레포지토리에 저장
-    const result = await this.imagesRepository.save({ ...dto })
-
-    // 파일 옮기기
-    if (dto.path) {
-      console.log('Image URL contains temp path, moving to posts...')
-      try {
-        const movedImage = await this.s3UploadService.moveImageFromTempToPosts(
-          dto.path
-        )
-        finalImageUrl = movedImage.url
-        console.log('Image moved successfully, new URL:', finalImageUrl)
-      } catch (error) {
-        console.error('Failed to move image:', error)
-        throw new BadRequestException(
-          `이미지 이동에 실패했습니다: ${error.message}`
-        )
-      }
-    } else {
-      console.log('No temp image to move or imageUrl is null')
-    }
-
-    return result
   }
 
   async getPosts(dto: PaginatePostDto, currentUserId?: number) {
@@ -133,8 +111,14 @@ export class PostsService {
     )
   }
 
-  async getPost(id: number, currentUserId?: number): Promise<any> {
-    const post = await this.postsRepository.findOne({
+  async getPost(
+    id: number,
+    currentUserId?: number,
+    qr?: QueryRunner
+  ): Promise<any> {
+    const repository = this.getRepository(qr)
+
+    const post = await repository.findOne({
       where: { id },
       ...DEFAULT_POST_FIND_OPTIONS,
     })

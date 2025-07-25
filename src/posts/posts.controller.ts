@@ -9,6 +9,8 @@ import {
   ParseIntPipe,
   UseGuards,
   Query,
+  UseInterceptors,
+  InternalServerErrorException,
 } from '@nestjs/common'
 import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
@@ -18,31 +20,44 @@ import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { User } from 'src/users/decorator/user.decorator'
 import { UserPayload } from 'src/users/types/user-payload.interface'
 import { ImageType } from 'src/common/entities/image.entity'
+import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor'
+import { ImagesService } from 'src/common/services/images.service'
+import { QueryRunner } from 'src/common/decorator/query-runner.decorator'
+import { QueryRunner as QR } from 'typeorm'
 
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly imagesService: ImagesService
+  ) {}
 
   @Post()
   @UseGuards(AccessTokenGuard)
+  @UseInterceptors(TransactionInterceptor)
   async create(
     @User('id') userId: number,
-    @Body()
-    dto: CreatePostDto
+    @Body() dto: CreatePostDto,
+    @QueryRunner() qr: QR
   ): Promise<any> {
-    const post = await this.postsService.createPost(dto, userId)
+    const post = await this.postsService.createPost(dto, userId, qr)
+
+    throw new InternalServerErrorException('testttt')
 
     // 이미지가 생성되면서 이미지들이 생성한 post와 연결되게 됨
     for (let i = 0; i < dto.images.length; i++) {
-      await this.postsService.createPostImage({
-        post: post,
-        order: i,
-        path: dto.images[i],
-        type: ImageType.POST_IMAGE,
-      })
+      await this.imagesService.createPostImage(
+        {
+          post: post,
+          order: i,
+          path: dto.images[i],
+          type: ImageType.POST_IMAGE,
+        },
+        qr
+      )
     }
 
-    return this.postsService.getPost(post.id, userId)
+    return this.postsService.getPost(post.id, userId, qr)
   }
 
   @Get()

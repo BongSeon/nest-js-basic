@@ -31,7 +31,7 @@ export class AuthService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     @InjectRepository(Image)
-    private imageRepository: Repository<Image>,
+    private imagesRepository: Repository<Image>,
     private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
     private configService: ConfigService,
@@ -237,7 +237,7 @@ export class AuthService {
 
     const secret = this.configService.get<string>(ENV_JWT_SECRET_KEY)
 
-    const expiresIn = type === 'access' ? '2m' : '1h'
+    const expiresIn = type === 'access' ? '10m' : '1h'
 
     return this.jwtService.sign(payload, {
       secret,
@@ -481,7 +481,7 @@ export class AuthService {
         )
 
         // 데이터베이스에서 이미지 엔터티 삭제
-        await this.imageRepository.remove(existingImage)
+        await this.imagesRepository.remove(existingImage)
 
         console.log(`기존 ${imageTypeName} 삭제 완료`)
       }
@@ -497,7 +497,7 @@ export class AuthService {
       )
 
       // 새로운 이미지 엔터티 생성
-      const newImage = this.imageRepository.create({
+      const newImage = this.imagesRepository.create({
         path: updateProfileImageDto.image, // 파일명만 저장
         type: updateProfileImageDto.type,
       })
@@ -509,7 +509,7 @@ export class AuthService {
         newImage.coverUser = user
       }
 
-      const savedImage = await this.imageRepository.save(newImage)
+      const savedImage = await this.imagesRepository.save(newImage)
 
       // 사용자의 이미지 참조 업데이트
       if (updateProfileImageDto.type === ImageType.PROFILE_IMAGE) {
@@ -570,7 +570,7 @@ export class AuthService {
       await this.s3UploadService.deleteProfileImage(userId, imageToDelete.path)
 
       // 데이터베이스에서 이미지 엔터티 삭제
-      await this.imageRepository.remove(imageToDelete)
+      await this.imagesRepository.remove(imageToDelete)
 
       // 사용자의 이미지 참조 제거
       if (imageType === ImageType.PROFILE_IMAGE) {

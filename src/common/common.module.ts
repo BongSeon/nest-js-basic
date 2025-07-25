@@ -13,6 +13,7 @@ import {
 import { TokenBlacklistService } from '../auth/services/token-blacklist.service'
 import { AuthService } from '../auth/auth.service'
 import { CommonService } from './services/common.service'
+import { ImagesService } from './services/images.service'
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CommonService } from './services/common.service'
   ],
   controllers: [UploadController],
   providers: [
+    ImagesService,
     S3UploadService,
     AccessTokenGuard,
     BearerTokenGuard,
@@ -32,6 +34,6 @@ import { CommonService } from './services/common.service'
     AuthService,
     CommonService,
   ],
-  exports: [S3UploadService, CommonService],
+  exports: [ImagesService, S3UploadService, CommonService],
 })
 export class CommonModule {}
