@@ -10,7 +10,6 @@ import {
   UseGuards,
   Query,
   UseInterceptors,
-  InternalServerErrorException,
 } from '@nestjs/common'
 import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
@@ -41,8 +40,6 @@ export class PostsController {
     @QueryRunner() qr: QR
   ): Promise<any> {
     const post = await this.postsService.createPost(dto, userId, qr)
-
-    throw new InternalServerErrorException('testttt')
 
     // 이미지가 생성되면서 이미지들이 생성한 post와 연결되게 됨
     for (let i = 0; i < dto.images.length; i++) {

@@ -1,0 +1,11 @@
+{
+  "title": "NestJS 프로젝트 규칙",
+  "rules": [
+    "🔷 프로젝트 구조 규칙",
+    "Use appropriate code separation in the common module (common 모듈로 적절히 코드 분리)",
+
+    "🔷 로그인 테스트 규칙",
+    "Basic Token for login test is Basic c2E1cmk6MTIzNA== (1번 유저)",
+    "응답으로 오는 객체의 data 프로퍼티 내부에 accessToken 프로퍼티가 있음"
+  ]
+}
