@@ -18,18 +18,13 @@ import { PaginatePostDto } from './dto/post-pagination.dto'
 import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { User } from 'src/users/decorator/user.decorator'
 import { UserPayload } from 'src/users/types/user-payload.interface'
-import { ImageType } from 'src/common/entities/image.entity'
 import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor'
-import { ImagesService } from 'src/common/services/images.service'
 import { QueryRunner } from 'src/common/decorator/query-runner.decorator'
 import { QueryRunner as QR } from 'typeorm'
 
 @Controller('posts')
 export class PostsController {
-  constructor(
-    private readonly postsService: PostsService,
-    private readonly imagesService: ImagesService
-  ) {}
+  constructor(private readonly postsService: PostsService) {}
 
   @Post()
   @UseGuards(AccessTokenGuard)
@@ -39,20 +34,8 @@ export class PostsController {
     @Body() dto: CreatePostDto,
     @QueryRunner() qr: QR
   ): Promise<any> {
+    // PostsService에서 이미지 처리까지 모두 완료됨
     const post = await this.postsService.createPost(dto, userId, qr)
-
-    // 이미지가 생성되면서 이미지들이 생성한 post와 연결되게 됨
-    for (let i = 0; i < dto.images.length; i++) {
-      await this.imagesService.createPostImage(
-        {
-          post: post,
-          order: i,
-          path: dto.images[i],
-          type: ImageType.POST_IMAGE,
-        },
-        qr
-      )
-    }
 
     return this.postsService.getPost(post.id, userId, qr)
   }

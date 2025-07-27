@@ -197,7 +197,7 @@ export class S3UploadService {
     console.log('Moving image from temp to posts:', { fileName })
 
     // tempUrl에서 키 추출 (예: "/images/temp/filename.png" -> "images/temp/filename.png")
-    const tempKey = `images/temp/${fileName}`
+    const tempKey = `${S3_IMAGES_PATH}/${S3_TEMP_IMAGE_PATH}/${fileName}`
 
     // 새로운 키 생성 (temp -> posts)
     const newKey = `${S3_IMAGES_PATH}/${S3_POST_IMAGE_PATH}/${fileName}`
@@ -210,13 +210,20 @@ export class S3UploadService {
     })
 
     try {
+      // console.log('Attempting to copy:', {
+      //   bucketName: this.bucketName,
+      //   tempKey,
+      //   newKey,
+      //   copySource: `${this.bucketName}/${tempKey}`,
+      // })
+
       await this.s3Client.send(copyCommand)
 
       // 원본 파일 삭제
       await this.deleteImage(tempKey)
 
       const newUrl = `${this.bucketUrl}/${newKey}`
-      // console.log('result:', { newUrl, newKey })
+      // console.log('Successfully moved image:', { newUrl, newKey })
 
       return {
         url: newUrl,
@@ -225,6 +232,7 @@ export class S3UploadService {
     } catch (error) {
       console.error('S3 Move Error:', {
         error: error.message,
+        code: error.code,
         tempKey,
         newKey,
         bucketName: this.bucketName,

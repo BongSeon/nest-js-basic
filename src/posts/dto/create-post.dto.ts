@@ -1,8 +1,10 @@
 import { PickType, PartialType } from '@nestjs/mapped-types'
-import { IsOptional, IsString, IsEnum } from 'class-validator'
+import { IsOptional, IsString, IsEnum, ValidateNested } from 'class-validator'
+import { Type } from 'class-transformer'
 import { BasePostDto } from './base-post.dto'
 import { PostType } from '../entities/post.entity'
 import { TitleRequiredForType } from './validators/title-required-for-type.validator'
+import { PostImagesDto } from './post-images.dto'
 
 export class CreatePostDto extends PartialType(
   PickType(BasePostDto, ['content'] as const)
@@ -20,7 +22,8 @@ export class CreatePostDto extends PartialType(
   @IsOptional()
   type: PostType = PostType.USER
 
-  @IsString({ each: true })
+  @ValidateNested()
+  @Type(() => PostImagesDto)
   @IsOptional()
-  images: string[] = []
+  images?: PostImagesDto = { kept: [], added: [] }
 }

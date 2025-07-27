@@ -25,14 +25,14 @@ export class ImagesService {
 
     // 이미지 URL이 있는 경우 temp에서 posts로 이동
     let finalImageUrl = dto.path
-    console.log('Creating post with imageUrl:', dto.path)
+    // console.log('Creating post with imageUrl:', finalImageUrl)
 
     // 이미지 레포지토리에 저장
     const result = await repository.save({ ...dto })
 
     // 파일 옮기기
     if (dto.path) {
-      console.log('Image URL contains temp path, moving to posts...')
+      // console.log('Image URL contains temp path, moving to posts...')
       try {
         const movedImage = await this.s3UploadService.moveImageFromTempToPosts(
           dto.path

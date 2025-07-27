@@ -10,8 +10,10 @@ import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
 import { Post } from './entities/post.entity'
 import { User, UserRole } from '../users/entities/user.entity'
-import { Image } from 'src/common/entities/image.entity'
+import { Image, ImageType } from 'src/common/entities/image.entity'
 import { CommonService } from 'src/common/services/common.service'
+import { S3UploadService } from 'src/common/services/s3-upload.service'
+import { S3_IMAGES_PATH, S3_POST_IMAGE_PATH } from 'src/common/const/path.const'
 import { DEFAULT_POST_FIND_OPTIONS } from './const/default-post-find-options'
 import { PaginatePostDto } from './dto/post-pagination.dto'
 
@@ -25,6 +27,7 @@ export class PostsService {
     @InjectRepository(Image)
     private imagesRepository: Repository<Image>,
     private commonService: CommonService,
+    private s3UploadService: S3UploadService,
     private dataSource: DataSource
   ) {}
 
@@ -46,6 +49,9 @@ export class PostsService {
     qr?: QueryRunner
   ): Promise<any> {
     const repository = this.getRepository(qr)
+    const imageRepository = qr
+      ? qr.manager.getRepository<Image>(Image)
+      : this.imagesRepository
 
     // 사용자 존재 여부 확인
     const user = await this.usersRepository.findOne({
@@ -56,16 +62,48 @@ export class PostsService {
     }
 
     const post = repository.create({
-      ...createPostDto,
+      title: createPostDto.title,
+      content: createPostDto.content,
+      type: createPostDto.type,
       images: [],
       userId: userId,
     })
     const savedPost = await repository.save(post)
 
+    // added 이미지들을 temp에서 posts로 이동 및 Image 엔티티 생성
+    if (createPostDto.images?.added && createPostDto.images.added.length > 0) {
+      const imageEntities = []
+
+      for (let i = 0; i < createPostDto.images.added.length; i++) {
+        const fileName = createPostDto.images.added[i]
+        try {
+          // S3에서 temp -> posts로 이미지 이동
+          await this.s3UploadService.moveImageFromTempToPosts(fileName)
+
+          // Image 엔티티 생성
+          const imageEntity = imageRepository.create({
+            path: fileName,
+            type: ImageType.POST_IMAGE,
+            order: i,
+            post: savedPost,
+          })
+
+          imageEntities.push(imageEntity)
+        } catch (error) {
+          console.error(`Failed to move image ${fileName}:`, error)
+          // 개별 이미지 이동 실패는 로그만 남기고 계속 진행
+        }
+      }
+
+      if (imageEntities.length > 0) {
+        await imageRepository.save(imageEntities)
+      }
+    }
+
     // user 관계를 포함하여 다시 조회
     const postWithUser = await repository.findOne({
       where: { id: savedPost.id },
-      relations: ['user', 'user.profile', 'user.cover'],
+      relations: ['user', 'user.profile', 'user.cover', 'images'],
     })
 
     // User 정보를 포함하여 반환하되 userId는 제외
@@ -150,36 +188,123 @@ export class PostsService {
     updatePostDto: UpdatePostDto,
     userId: number
   ): Promise<any> {
-    const post = await this.postsRepository.findOne({
-      where: { id },
-      ...DEFAULT_POST_FIND_OPTIONS,
-    })
-    if (!post) {
-      throw new NotFoundException(`Post with ID ${id} not found`)
-    }
+    const queryRunner = this.dataSource.createQueryRunner()
+    await queryRunner.connect()
+    await queryRunner.startTransaction()
 
-    // 게시글 작성자만 수정할 수 있도록 권한 체크
-    if (post.userId !== userId) {
-      throw new ForbiddenException('You can only update your own posts')
-    }
+    try {
+      const postRepository = queryRunner.manager.getRepository<Post>(Post)
+      const imageRepository = queryRunner.manager.getRepository<Image>(Image)
 
-    // userId가 제공된 경우 사용자 존재 여부 확인
-    if (updatePostDto.userId) {
-      const user = await this.usersRepository.findOne({
-        where: { id: updatePostDto.userId },
+      const post = await postRepository.findOne({
+        where: { id },
+        relations: ['images'],
       })
-      if (!user) {
-        throw new BadRequestException(
-          `User with ID ${updatePostDto.userId} not found`
-        )
+      if (!post) {
+        throw new NotFoundException(`Post with ID ${id} not found`)
       }
+
+      // 게시글 작성자만 수정할 수 있도록 권한 체크
+      if (post.userId !== userId) {
+        throw new ForbiddenException('You can only update your own posts')
+      }
+
+      // userId가 제공된 경우 사용자 존재 여부 확인
+      if (updatePostDto.userId) {
+        const user = await this.usersRepository.findOne({
+          where: { id: updatePostDto.userId },
+        })
+        if (!user) {
+          throw new BadRequestException(
+            `User with ID ${updatePostDto.userId} not found`
+          )
+        }
+      }
+
+      // 기본 게시글 정보 업데이트 (images 제외)
+      const { images, ...postUpdateData } = updatePostDto
+      Object.assign(post, postUpdateData)
+      await postRepository.save(post)
+
+      // 이미지 처리
+      if (images) {
+        // 기존 이미지들 가져오기
+        const existingImages = await imageRepository.find({
+          where: { post: { id } },
+        })
+
+        // kept에 없는 기존 이미지들 삭제
+        const keptImagePaths = images.kept || []
+        const imagesToDelete = existingImages.filter(
+          (img) => !keptImagePaths.includes(img.path)
+        )
+
+        if (imagesToDelete.length > 0) {
+          // S3에서 실제 파일들 삭제
+          for (const image of imagesToDelete) {
+            try {
+              const s3Key = `${S3_IMAGES_PATH}/${S3_POST_IMAGE_PATH}/${image.path}`
+              await this.s3UploadService.deleteImage(s3Key)
+              // console.log(`Successfully deleted image from S3: ${s3Key}`)
+            } catch (error) {
+              console.error(
+                `Failed to delete image from S3: ${image.path}`,
+                error
+              )
+              // S3 삭제 실패해도 DB 삭제는 계속 진행
+            }
+          }
+
+          // 데이터베이스에서 이미지 레코드 삭제
+          const imageIdsToDelete = imagesToDelete.map((img) => img.id)
+          await imageRepository.delete(imageIdsToDelete)
+          // console.log(`Deleted ${imageIdsToDelete.length} images from database`)
+        }
+
+        // added 이미지들을 temp에서 posts로 이동 및 Image 엔티티 생성
+        if (images.added && images.added.length > 0) {
+          const imageEntities = []
+
+          // 기존 kept 이미지들의 개수를 계산하여 order 시작점 설정
+          const keptCount = (images.kept || []).length
+
+          for (let i = 0; i < images.added.length; i++) {
+            const fileName = images.added[i]
+            try {
+              // S3에서 temp -> posts로 이미지 이동
+              await this.s3UploadService.moveImageFromTempToPosts(fileName)
+
+              // Image 엔티티 생성 (order는 kept 이미지 다음부터 시작)
+              const imageEntity = imageRepository.create({
+                path: fileName,
+                type: ImageType.POST_IMAGE,
+                order: keptCount + i,
+                post: post,
+              })
+
+              imageEntities.push(imageEntity)
+            } catch (error) {
+              console.error(`Failed to move image ${fileName}:`, error)
+              // 개별 이미지 이동 실패는 로그만 남기고 계속 진행
+            }
+          }
+
+          if (imageEntities.length > 0) {
+            await imageRepository.save(imageEntities)
+          }
+        }
+      }
+
+      await queryRunner.commitTransaction()
+
+      // 업데이트된 게시글을 liked 정보와 함께 다시 조회
+      return this.getPost(id, userId)
+    } catch (error) {
+      await queryRunner.rollbackTransaction()
+      throw error
+    } finally {
+      await queryRunner.release()
     }
-
-    Object.assign(post, updatePostDto)
-    await this.postsRepository.save(post)
-
-    // 업데이트된 게시글을 liked 정보와 함께 다시 조회
-    return this.getPost(id, userId)
   }
 
   async remove(id: number, userId: number, userRole: UserRole): Promise<void> {
@@ -211,12 +336,30 @@ export class PostsService {
 
       // 2. 게시물 이미지 삭제
       if (post.images && post.images.length > 0) {
+        // S3에서 실제 파일들 삭제
+        for (const image of post.images) {
+          try {
+            const s3Key = `${S3_IMAGES_PATH}/${S3_POST_IMAGE_PATH}/${image.path}`
+            await this.s3UploadService.deleteImage(s3Key)
+            // console.log(`Successfully deleted image from S3: ${s3Key}`)
+          } catch (error) {
+            console.error(
+              `Failed to delete image from S3: ${image.path}`,
+              error
+            )
+            // S3 삭제 실패해도 DB 삭제는 계속 진행
+          }
+        }
+
+        // 데이터베이스에서 이미지 레코드 삭제
         await queryRunner.manager
           .createQueryBuilder()
           .delete()
           .from(Image)
           .where('postId = :postId', { postId: id })
           .execute()
+
+        // console.log(`Deleted ${post.images.length} images from S3 and database`)
       }
 
       // 3. 게시물 삭제
