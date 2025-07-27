@@ -11,6 +11,7 @@ import { Exclude } from 'class-transformer'
 import { User } from '../../users/entities/user.entity'
 import { BaseEntity } from '../../common/entities/base.entity'
 import { Image } from '../../common/entities/image.entity'
+import { PostReply } from '../../post-replies/entities/post-reply.entity'
 
 export enum PostType {
   USER = 'user',
@@ -44,8 +45,14 @@ export class Post extends BaseEntity {
   @OneToMany(() => Image, (image) => image.post)
   images: Image[]
 
+  @OneToMany(() => PostReply, (reply) => reply.post)
+  replies: PostReply[]
+
   @Column({ default: 0 })
   likeCount: number
+
+  @Column({ default: 0 })
+  replyCount: number
 
   @ManyToMany(() => User, (user) => user.likedPosts)
   @JoinTable({

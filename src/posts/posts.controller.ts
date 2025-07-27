@@ -88,6 +88,7 @@ export class PostsController {
 
   @Post(':id/like')
   @UseGuards(AccessTokenGuard)
+  @UseInterceptors(TransactionInterceptor)
   async likePost(
     @Param('id', ParseIntPipe) postId: number,
     @User('id') userId: number
@@ -97,6 +98,7 @@ export class PostsController {
 
   @Delete(':id/like')
   @UseGuards(AccessTokenGuard)
+  @UseInterceptors(TransactionInterceptor)
   async unlikePost(
     @Param('id', ParseIntPipe) postId: number,
     @User('id') userId: number
