@@ -77,8 +77,11 @@ export class PostRepliesService {
       .where('id = :postId', { postId })
       .execute()
 
-    // 댓글 정보만 반환 (관계 정보 제외)
-    return savedReply
+    // 작성자 정보와 함께 반환
+    return repository.findOne({
+      where: { id: savedReply.id },
+      relations: ['user', 'user.profile'],
+    })
   }
 
   async findAllByPost(postId: number, dto: PaginatePostReplyDto) {
@@ -107,6 +110,7 @@ export class PostRepliesService {
 
     const reply = await repository.findOne({
       where: { id },
+      relations: ['user', 'user.profile'],
     })
 
     if (!reply) {
