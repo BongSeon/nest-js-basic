@@ -15,7 +15,7 @@ import { CommonService } from 'src/common/services/common.service'
 import { S3UploadService } from 'src/common/services/s3-upload.service'
 import { S3_IMAGES_PATH, S3_POST_IMAGE_PATH } from 'src/common/const/path.const'
 import { DEFAULT_POST_FIND_OPTIONS } from './const/default-post-find-options'
-import { PaginatePostDto } from './dto/post-pagination.dto'
+import { GetPostsDto } from './dto/get-posts.dto'
 
 @Injectable()
 export class PostsService {
@@ -110,7 +110,7 @@ export class PostsService {
     return this.formatPostResponse(postWithUser)
   }
 
-  async getPosts(dto: PaginatePostDto, currentUserId?: number) {
+  async getPosts(dto: GetPostsDto, currentUserId?: number) {
     const result = await this.paginatePosts(dto)
 
     // 현재 사용자의 좋아요 정보를 한 번의 쿼리로 가져오기
@@ -140,7 +140,7 @@ export class PostsService {
     }
   }
 
-  async paginatePosts(dto: PaginatePostDto) {
+  async paginatePosts(dto: GetPostsDto) {
     return this.commonService.paginate(
       dto,
       this.postsRepository,

@@ -8,10 +8,12 @@ import {
   Delete,
   ParseIntPipe,
   UseGuards,
+  Query,
 } from '@nestjs/common'
 import { UsersService } from './users.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
+import { GetUsersDto } from './dto/get-users.dto'
 import { User, UserRole } from './entities/user.entity'
 import { AccessTokenGuard } from 'src/auth/guards/bearer-token.guard'
 import { RoleGuard } from 'src/auth/guards/role.guard'
@@ -29,12 +31,12 @@ export class UsersController {
   }
 
   @Get()
-  async findAll(): Promise<User[]> {
-    return await this.usersService.findAll()
+  async getUsers(@Query() paginationDto: GetUsersDto): Promise<any> {
+    return await this.usersService.getUsers(paginationDto)
   }
 
   @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number): Promise<User> {
+  async getUser(@Param('id', ParseIntPipe) id: number): Promise<User> {
     return await this.usersService.findOne(id)
   }
 

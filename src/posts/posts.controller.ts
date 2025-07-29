@@ -14,7 +14,7 @@ import {
 import { PostsService } from './posts.service'
 import { CreatePostDto } from './dto/create-post.dto'
 import { UpdatePostDto } from './dto/update-post.dto'
-import { PaginatePostDto } from './dto/post-pagination.dto'
+import { GetPostsDto } from './dto/get-posts.dto'
 import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { User } from 'src/users/decorator/user.decorator'
 import { UserPayload } from 'src/users/types/user-payload.interface'
@@ -43,7 +43,7 @@ export class PostsController {
   @Get()
   @UseGuards(AccessTokenGuard)
   async getPosts(
-    @Query() paginationDto: PaginatePostDto,
+    @Query() paginationDto: GetPostsDto,
     @User('id') userId: number
   ): Promise<any> {
     return await this.postsService.getPosts(paginationDto, userId)

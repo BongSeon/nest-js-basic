@@ -9,16 +9,19 @@ import * as bcrypt from 'bcrypt'
 import { ConfigService } from '@nestjs/config'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
+import { GetUsersDto } from './dto/get-users.dto'
 import { User } from './entities/user.entity'
 import { ENV_HASH_ROUNDS_KEY } from '../common/const/env-keys.const'
 import { DEFAULT_USER_FIND_OPTIONS } from './const/default-user-find-options'
+import { CommonService } from '../common/services/common.service'
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private commonService: CommonService
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -55,10 +58,17 @@ export class UsersService {
     return await this.usersRepository.save(user)
   }
 
-  async findAll(): Promise<User[]> {
-    return await this.usersRepository.find({
-      ...DEFAULT_USER_FIND_OPTIONS,
-    })
+  async getUsers(dto: GetUsersDto) {
+    return this.paginateUsers(dto)
+  }
+
+  async paginateUsers(dto: GetUsersDto) {
+    return this.commonService.paginate(
+      dto,
+      this.usersRepository,
+      DEFAULT_USER_FIND_OPTIONS,
+      'users'
+    )
   }
 
   async findOne(id: number): Promise<User> {
