@@ -125,7 +125,7 @@ export class CommonService {
      * 4) 정렬 로직의 경우 3-2)와 같음.
      */
 
-    let where: FindOptionsWhere<T> = {}
+    let where: FindOptionsWhere<T> | FindOptionsWhere<T>[] = {}
     let order: FindOptionsOrder<T> = {}
 
     for (const [key, value] of Object.entries(dto)) {
@@ -135,6 +135,23 @@ export class CommonService {
         where = { ...where, ...this.parseWhereFilter(key, value) }
       } else if (key.startsWith('order__')) {
         order = { ...order, ...this.parseWhereFilter(key, value) }
+      }
+    }
+
+    // where_or__username__i_like 형식의 필터를 처리
+    const whereOptions = { ...where }
+
+    for (const [key, value] of Object.entries(dto)) {
+      if (key.startsWith('or_where__')) {
+        const parsedFilter = this.parseWhereFilter(
+          key.replace('or_', ''),
+          value
+        ) as FindOptionsWhere<T>
+        if (!Array.isArray(where)) {
+          where = [{ ...whereOptions, ...parsedFilter }]
+        } else {
+          where.push({ ...whereOptions, ...parsedFilter })
+        }
       }
     }
 
@@ -186,8 +203,12 @@ export class CommonService {
       //   options[field] = FILTER_MAP[operator](value)
       // }
 
-      // { id: MoreThan(10) }
-      options[field] = FILTER_MAP[operator](value)
+      if (operator === 'i_like') {
+        options[field] = FILTER_MAP[operator](`%${value}%`)
+      } else {
+        // { id: MoreThan(10) }
+        options[field] = FILTER_MAP[operator](value)
+      }
     }
 
     return options

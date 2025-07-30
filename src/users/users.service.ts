@@ -59,10 +59,21 @@ export class UsersService {
   }
 
   async getUsers(dto: GetUsersDto) {
-    return this.paginateUsers(dto)
+    // search가 있는 경우 i_like 필드들로 변환
+    const transformedDto = { ...dto }
+
+    if (dto.search) {
+      transformedDto.or_where__username__i_like = dto.search
+      transformedDto.or_where__nickname__i_like = dto.search
+      transformedDto.or_where__email__i_like = dto.search
+      // search 필드는 제거 (CommonService에서 인식하지 못하므로)
+      delete transformedDto.search
+    }
+
+    return this.paginateUsers(transformedDto)
   }
 
-  async paginateUsers(dto: GetUsersDto) {
+  async paginateUsers(dto: any) {
     return this.commonService.paginate(
       dto,
       this.usersRepository,

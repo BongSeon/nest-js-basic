@@ -10,4 +10,16 @@ export class GetUsersDto extends BasePaginateDto {
   @IsOptional()
   @IsString()
   search?: string
+
+  @IsOptional()
+  @IsString()
+  or_where__username__i_like?: string
+
+  @IsOptional()
+  @IsString()
+  or_where__nickname__i_like?: string
+
+  @IsOptional()
+  @IsString()
+  or_where__email__i_like?: string
 }
