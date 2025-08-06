@@ -11,7 +11,7 @@ import { Post } from '../posts/entities/post.entity'
 import { User } from '../users/entities/user.entity'
 import { CreatePostReplyDto } from './dto/create-post-reply.dto'
 import { UpdatePostReplyDto } from './dto/update-post-reply.dto'
-import { PaginatePostReplyDto } from './dto/post-reply-pagination.dto'
+import { PaginatePostReplyDto } from './dto/paginate-post-reply.dto'
 import { CommonService } from '../common/services/common.service'
 
 @Injectable()

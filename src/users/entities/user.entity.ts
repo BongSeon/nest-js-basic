@@ -5,6 +5,7 @@ import {
   OneToMany,
   JoinColumn,
   ManyToMany,
+  JoinTable,
 } from 'typeorm'
 import { Exclude, Transform } from 'class-transformer'
 import { BaseEntity } from '../../common/entities/base.entity'
@@ -12,6 +13,7 @@ import { Image } from '../../common/entities/image.entity'
 import { getImageUrl } from '../../common/utils/image.util'
 import { ImageType } from '../../common/entities/image.entity'
 import { PostReply } from '../../post-replies/entities/post-reply.entity'
+import { Chat } from 'src/chats/entities/chat.entity'
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -30,7 +32,9 @@ export class User extends BaseEntity {
   nickname: string
 
   @Column({ length: 255 })
-  @Exclude()
+  @Exclude({
+    toPlainOnly: true, // 응답 시 제외
+  })
   password: string
 
   @Column({ default: false })
@@ -76,4 +80,8 @@ export class User extends BaseEntity {
 
   @OneToMany(() => PostReply, (reply) => reply.user)
   replies: PostReply[]
+
+  @ManyToMany(() => Chat, (chat) => chat.users)
+  @JoinTable()
+  chats: Chat[]
 }
