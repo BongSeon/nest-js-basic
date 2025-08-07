@@ -13,7 +13,7 @@ import { CreateChatDto } from './dto/create-chat.dto'
 import { ChatsService } from './chats.service'
 import { EnterChatDto } from './dto/enter-chat.dto'
 import { CreateMessageDto } from './messages/dto/create-messages.dto'
-import { ChatMessagesService } from './messages/messages.service'
+import { MessagesService } from './messages/messages.service'
 
 @WebSocketGateway({
   // ws://localhost:3000/chats
@@ -22,7 +22,7 @@ import { ChatMessagesService } from './messages/messages.service'
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsService: ChatsService,
-    private readonly chatMessagesService: ChatMessagesService
+    private readonly messagesService: MessagesService
   ) {}
 
   @WebSocketServer()
@@ -83,7 +83,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     }
 
-    const message = await this.chatMessagesService.createMessage(dto)
+    const message = await this.messagesService.createMessage(dto)
 
     // 나를 제외한 모두에게 보내는 방식
     console.log('chatId: ', message.chat.id)
