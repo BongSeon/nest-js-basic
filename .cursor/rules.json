@@ -4,6 +4,9 @@
     "🔷 프로젝트 구조 규칙",
     "Use appropriate code separation in the common module (common 모듈로 적절히 코드 분리)",
 
+    "🔷 import 관련 규칙",
+    "BaseEntity는 대부분의 Entity에서 기본이 되며 'src/common/entities/base.entity'에서 참조한다 (not from typeorm)",
+
     "🔷 로그인 테스트 규칙",
     "Basic Token for user login test is Basic c2E1cmk6MTIzNA== (1번 유저)",
     "Basic Token for admin login test is Basic YWRtaW46MTIzNA== (8번 유저)",

@@ -23,6 +23,7 @@ import {
 } from './common/const/env-keys.const'
 import { ChatsModule } from './chats/chats.module'
 import { Chat } from './chats/entities/chat.entity'
+import { Message } from './chats/messages/entities/message.entity'
 
 @Module({
   imports: [
@@ -37,7 +38,7 @@ import { Chat } from './chats/entities/chat.entity'
       username: process.env[ENV_DB_USERNAME_KEY],
       password: process.env[ENV_DB_PASSWORD_KEY],
       database: process.env[ENV_DB_DATABASE_KEY],
-      entities: [Post, User, Image, PostReply, Chat],
+      entities: [Post, User, Image, PostReply, Chat, Message],
       synchronize: true, // 개발 환경에서만 사용. 프로덕션에서는 false로 설정
     }),
     PostsModule,

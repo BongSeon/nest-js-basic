@@ -8,9 +8,9 @@ import {
   UpdateDateColumn,
 } from 'typeorm'
 import { IsString, IsNotEmpty } from 'class-validator'
-import { Post } from '../../posts/entities/post.entity'
-import { User } from '../../users/entities/user.entity'
-import { BaseEntity } from '../../common/entities/base.entity'
+import { Post } from 'src/posts/entities/post.entity'
+import { User } from 'src/users/entities/user.entity'
+import { BaseEntity } from 'src/common/entities/base.entity'
 
 @Entity('post_reply')
 export class PostReply extends BaseEntity {

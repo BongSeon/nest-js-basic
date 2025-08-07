@@ -8,10 +8,10 @@ import {
   JoinTable,
 } from 'typeorm'
 import { Exclude } from 'class-transformer'
-import { User } from '../../users/entities/user.entity'
-import { BaseEntity } from '../../common/entities/base.entity'
-import { Image } from '../../common/entities/image.entity'
-import { PostReply } from '../../post-replies/entities/post-reply.entity'
+import { User } from 'src/users/entities/user.entity'
+import { BaseEntity } from 'src/common/entities/base.entity'
+import { Image } from 'src/common/entities/image.entity'
+import { PostReply } from 'src/post-replies/entities/post-reply.entity'
 
 export enum PostType {
   USER = 'user',

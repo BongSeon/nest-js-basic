@@ -6,17 +6,24 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
+  WsException,
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
 import { CreateChatDto } from './dto/create-chat.dto'
 import { ChatsService } from './chats.service'
+import { EnterChatDto } from './dto/enter-chat.dto'
+import { CreateMessageDto } from './messages/dto/create-messages.dto'
+import { ChatMessagesService } from './messages/messages.service'
 
 @WebSocketGateway({
   // ws://localhost:3000/chats
   namespace: 'chats',
 })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly chatsService: ChatsService) {}
+  constructor(
+    private readonly chatsService: ChatsService,
+    private readonly chatMessagesService: ChatMessagesService
+  ) {}
 
   @WebSocketServer()
   server: Server // this.server.emit('receiveMessage', message) 모든 클라이언트에게 메시지 전송
@@ -36,28 +43,51 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('enterChat')
-  enterChat(
+  async enterChat(
     // 방(chat)의 id들을 리스트로 받는다.
-    @MessageBody() chatIds: number[],
+    @MessageBody() dto: EnterChatDto,
     @ConnectedSocket() socket: Socket
   ) {
-    for (const chatId of chatIds) {
-      socket.join(chatId.toString())
+    for (const chatId of dto.chatIds) {
+      const exists = await this.chatsService.checkIfChatExists(chatId)
+      if (!exists) {
+        throw new WsException({
+          code: 100,
+          message: `존재하지 않는 채팅방입니다. chatId: ${chatId}`,
+        })
+      }
     }
+
+    socket.join(dto.chatIds.map((id) => id.toString()))
   }
 
+  /**
+   * 참고 사항
+   * 1. 방에 있는 모두에게 보내는 방식
+   * this.server
+   *   .in(message.chatId.toString())
+   *   .emit('receiveMessage', message.message)
+   * 2. 나를 제외한 모두에게 보내는 방식
+   * socket.to(dto.chatId.toString()).emit('receiveMessage', dto.content)
+   */
   @SubscribeMessage('sendMessage')
-  sendMessage(
-    @MessageBody() message: { message: string; chatId: number },
+  async sendMessage(
+    @MessageBody() dto: CreateMessageDto,
     @ConnectedSocket() socket: Socket
   ) {
-    // 1. 방에 있는 모두에게 보내는 방식
-    // this.server
-    //   .in(message.chatId.toString())
-    //   .emit('receiveMessage', message.message)
+    const chatExists = await this.chatsService.checkIfChatExists(dto.chatId)
+    if (!chatExists) {
+      throw new WsException({
+        code: 100,
+        message: `존재하지 않는 채팅방입니다. chatId: ${dto.chatId}`,
+      })
+    }
 
-    // 2. 나를 제외한 모두에게 보내는 방식
-    socket.to(message.chatId.toString()).emit('receiveMessage', message.message)
+    const message = await this.chatMessagesService.createMessage(dto)
+
+    // 나를 제외한 모두에게 보내는 방식
+    console.log('chatId: ', message.chat.id)
+    socket.to(message.chat.id.toString()).emit('receiveMessage', dto.content)
   }
 
   handleDisconnect(socket: Socket) {

@@ -36,4 +36,12 @@ export class ChatsService {
       where: { id: chat.id },
     })
   }
+
+  async checkIfChatExists(chatId: number) {
+    const chat = await this.chatRepository.findOne({
+      where: { id: chatId },
+    })
+
+    return !!chat
+  }
 }
