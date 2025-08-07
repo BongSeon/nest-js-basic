@@ -14,6 +14,8 @@ import { ChatsService } from './chats.service'
 import { EnterChatDto } from './dto/enter-chat.dto'
 import { CreateMessageDto } from './messages/dto/create-messages.dto'
 import { MessagesService } from './messages/messages.service'
+import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common'
+import { SocketCatchHttpFilter } from 'src/common/filters/socket-catch-http.filter'
 
 @WebSocketGateway({
   // ws://localhost:3000/chats
@@ -32,6 +34,17 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('Client connected: ', socket.id)
   }
 
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    })
+  )
+  @UseFilters(SocketCatchHttpFilter)
   @SubscribeMessage('createChat')
   async createChat(
     @MessageBody() dto: CreateChatDto,
@@ -42,6 +55,17 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     socket.emit('onCreatedChat', chat)
   }
 
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    })
+  )
+  @UseFilters(SocketCatchHttpFilter)
   @SubscribeMessage('enterChat')
   async enterChat(
     // 방(chat)의 id들을 리스트로 받는다.
@@ -70,6 +94,17 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * 2. 나를 제외한 모두에게 보내는 방식
    * socket.to(dto.chatId.toString()).emit('receiveMessage', dto.content)
    */
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    })
+  )
+  @UseFilters(SocketCatchHttpFilter)
   @SubscribeMessage('sendMessage')
   async sendMessage(
     @MessageBody() dto: CreateMessageDto,

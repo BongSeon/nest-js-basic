@@ -28,9 +28,12 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
+      transform: true, // 요청 데이터를 DTO 클래스의 인스턴스로 변환
+      transformOptions: {
+        enableImplicitConversion: true, // 요청 데이터를 DTO 클래스의 인스턴스로 변환
+      },
       whitelist: true, // DTO에 정의되지 않은 속성은 제거
       forbidNonWhitelisted: true, // DTO에 정의되지 않은 속성이 있으면 요청 자체를 막음
-      transform: true, // 요청 데이터를 DTO 클래스의 인스턴스로 변환
     })
   )
   await app.listen(3000)
