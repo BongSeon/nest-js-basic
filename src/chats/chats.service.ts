@@ -19,7 +19,7 @@ export class ChatsService {
       dto,
       this.chatRepository,
       {
-        relations: ['users'],
+        relations: ['users', 'owner'],
       },
       'chats'
     )
@@ -30,10 +30,13 @@ export class ChatsService {
       // 채팅방 생성 시 채팅방에 참여하는 유저들을 저장한다.
       // [{id: 1}, {id: 2}]
       users: dto.userIds.map((id) => ({ id })),
+      owner: { id: dto.ownerId },
+      type: dto.type,
     })
 
     return this.chatRepository.findOne({
       where: { id: chat.id },
+      relations: ['users', 'owner'],
     })
   }
 

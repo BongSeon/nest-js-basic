@@ -86,6 +86,9 @@ export class User extends BaseEntity {
   @JoinTable()
   chats: Chat[]
 
+  @OneToMany(() => Chat, (chat) => chat.owner)
+  ownedChats: Chat[]
+
   @OneToMany(() => Message, (message) => message.user)
   messages: Message[]
 }
