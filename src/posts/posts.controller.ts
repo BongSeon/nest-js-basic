@@ -18,7 +18,7 @@ import { GetPostsDto } from './dto/get-posts.dto'
 import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { User } from 'src/users/decorator/user.decorator'
 import { UserPayload } from 'src/users/types/user-payload.interface'
-import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor'
+import { TransactionInterceptor } from 'src/common/interceptors/transaction.interceptor'
 import { QueryRunner } from 'src/common/decorator/query-runner.decorator'
 import { QueryRunner as QR } from 'typeorm'
 

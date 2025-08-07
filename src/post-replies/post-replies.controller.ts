@@ -18,7 +18,7 @@ import { PaginatePostReplyDto } from './dto/paginate-post-reply.dto'
 import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { User } from '../users/decorator/user.decorator'
 import { UserPayload } from '../users/types/user-payload.interface'
-import { TransactionInterceptor } from '../common/interceptor/transaction.interceptor'
+import { TransactionInterceptor } from '../common/interceptors/transaction.interceptor'
 import { QueryRunner } from '../common/decorator/query-runner.decorator'
 import { QueryRunner as QR } from 'typeorm'
 
