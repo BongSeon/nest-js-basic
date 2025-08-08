@@ -9,13 +9,16 @@ import {
   WsException,
 } from '@nestjs/websockets'
 import { Server, Socket } from 'socket.io'
-import { CreateChatDto } from './dto/create-chat.dto'
+import { AuthService } from 'src/auth/auth.service'
+import { UsersService } from 'src/users/users.service'
 import { ChatsService } from './chats.service'
-import { EnterChatDto } from './dto/enter-chat.dto'
 import { CreateMessageDto } from './messages/dto/create-messages.dto'
 import { MessagesService } from './messages/messages.service'
 import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common'
 import { SocketCatchHttpFilter } from 'src/common/filters/socket-catch-http.filter'
+import { User } from 'src/users/entities/user.entity'
+import { CreateChatDto } from './dto/create-chat.dto'
+import { EnterChatDto } from './dto/enter-chat.dto'
 
 @WebSocketGateway({
   // ws://localhost:3000/chats
@@ -24,14 +27,46 @@ import { SocketCatchHttpFilter } from 'src/common/filters/socket-catch-http.filt
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsService: ChatsService,
-    private readonly messagesService: MessagesService
+    private readonly messagesService: MessagesService,
+    private readonly usersService: UsersService,
+    private readonly authService: AuthService
   ) {}
 
   @WebSocketServer()
   server: Server // this.server.emit('receiveMessage', message) 모든 클라이언트에게 메시지 전송
 
-  handleConnection(socket: Socket) {
-    console.log('Client connected: ', socket.id)
+  //authorization
+  async handleConnection(socket: Socket & { user: User }) {
+    try {
+      const headers = socket.handshake.headers
+
+      // Bearer <token>
+      const rawToken = headers['authorization']
+      if (!rawToken) {
+        socket.disconnect()
+        return
+      }
+
+      const tokenType = 'Bearer'
+
+      const token = rawToken.startsWith(tokenType + ' ')
+        ? rawToken.substring(tokenType.length + 1)
+        : null
+
+      if (!token) {
+        socket.disconnect()
+        return
+      }
+
+      const payload: any = await this.authService.verifyToken(token)
+      const user = await this.usersService.findOne(payload.sub)
+      socket.user = user
+      // id, username 출력
+      console.log('Client connected: ', user.id, user.username)
+    } catch (error) {
+      console.log(`토큰이 유효하지 않습니다. ${error.message}`)
+      socket.disconnect()
+    }
   }
 
   @UsePipes(
@@ -48,9 +83,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('createChat')
   async createChat(
     @MessageBody() dto: CreateChatDto,
-    @ConnectedSocket() socket: Socket
+    @ConnectedSocket() socket: Socket & { user: User }
   ) {
-    const chat = await this.chatsService.createChat(dto)
+    const chat = await this.chatsService.createChat(dto, socket.user.id)
 
     socket.emit('onCreatedChat', chat)
   }
@@ -108,7 +143,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sendMessage')
   async sendMessage(
     @MessageBody() dto: CreateMessageDto,
-    @ConnectedSocket() socket: Socket
+    @ConnectedSocket() socket: Socket & { user: User }
   ) {
     const chatExists = await this.chatsService.checkIfChatExists(dto.chatId)
     if (!chatExists) {
@@ -118,7 +153,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       })
     }
 
-    const message = await this.messagesService.createMessage(dto)
+    const message = await this.messagesService.createMessage(
+      dto,
+      socket.user.id
+    )
 
     // 나를 제외한 모두에게 보내는 방식
     console.log('chatId: ', message.chat.id)

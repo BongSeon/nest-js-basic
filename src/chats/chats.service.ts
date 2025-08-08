@@ -25,12 +25,12 @@ export class ChatsService {
     )
   }
 
-  async createChat(dto: CreateChatDto) {
+  async createChat(dto: CreateChatDto, ownerId: number) {
     const chat = await this.chatRepository.save({
       // 채팅방 생성 시 채팅방에 참여하는 유저들을 저장한다.
       // [{id: 1}, {id: 2}]
-      users: dto.userIds.map((id) => ({ id })),
-      owner: { id: dto.ownerId },
+      users: dto.userIds?.map((id) => ({ id })) || [{ id: ownerId }],
+      owner: { id: ownerId },
       type: dto.type,
     })
 

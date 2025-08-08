@@ -387,6 +387,7 @@ export class AuthService {
       const secret = this.configService.get<string>(ENV_JWT_SECRET_KEY)
       return this.jwtService.verifyAsync(token, { secret })
     } catch (error) {
+      console.log('error: ', error)
       throw new UnauthorizedException(
         '토큰이 만료되었거나 유효하지 않습니다.' + error.message
       )
