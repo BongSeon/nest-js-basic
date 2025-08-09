@@ -23,6 +23,9 @@ import { EnterChatDto } from './dto/enter-chat.dto'
 @WebSocketGateway({
   // ws://localhost:3000/chats
   namespace: 'chats',
+  cors: {
+    origin: '*',
+  },
 })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
@@ -33,7 +36,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   @WebSocketServer()
-  server: Server // this.server.emit('receiveMessage', message) 모든 클라이언트에게 메시지 전송
+  server: Server // this.server.emit('onMessage', message) 모든 클라이언트에게 메시지 전송
 
   //authorization
   async handleConnection(socket: Socket & { user: User }) {
@@ -41,7 +44,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const headers = socket.handshake.headers
 
       // Bearer <token>
-      const rawToken = headers['authorization']
+      const rawToken = headers['authorization'] || socket.handshake.auth?.token
       if (!rawToken) {
         socket.disconnect()
         return
@@ -63,6 +66,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.user = user
       // id, username 출력
       console.log('Client connected: ', user.id, user.username)
+      // 해당 클라이언트에만 메시지 전송
+      socket.emit('onConnected', {
+        message: `${user.username}님이 채팅 로비에 들어왔습니다.`,
+      })
     } catch (error) {
       console.log(`토큰이 유효하지 않습니다. ${error.message}`)
       socket.disconnect()
@@ -125,9 +132,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * 1. 방에 있는 모두에게 보내는 방식
    * this.server
    *   .in(message.chatId.toString())
-   *   .emit('receiveMessage', message.message)
+   *   .emit('onMessage', message.message)
    * 2. 나를 제외한 모두에게 보내는 방식
-   * socket.to(dto.chatId.toString()).emit('receiveMessage', dto.content)
+   * socket.to(dto.chatId.toString()).emit('onMessage', dto.content)
    */
   @UsePipes(
     new ValidationPipe({
@@ -158,9 +165,23 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       socket.user.id
     )
 
+    type OnMessageResponse = {
+      id: number
+      content: string
+      createdAt: Date
+      user: User
+      chatId: number
+    }
+    const response: OnMessageResponse = {
+      id: message.id,
+      content: message.content,
+      chatId: message.chat.id,
+      user: message.user,
+      createdAt: message.createdAt,
+    }
+
     // 나를 제외한 모두에게 보내는 방식
-    console.log('chatId: ', message.chat.id)
-    socket.to(message.chat.id.toString()).emit('receiveMessage', dto.content)
+    socket.to(message.chat.id.toString()).emit('onMessage', response)
   }
 
   handleDisconnect(socket: Socket) {

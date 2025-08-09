@@ -35,6 +35,10 @@ export class CommonService {
     const [results, count] = await repository.findAndCount({
       ...findOptions,
       ...overrideFindOptions,
+      where: {
+        ...findOptions.where,
+        ...overrideFindOptions?.where,
+      },
     })
 
     return {
@@ -57,6 +61,10 @@ export class CommonService {
     const results = await repository.find({
       ...findOptions,
       ...overrideFindOptions,
+      where: {
+        ...findOptions.where,
+        ...overrideFindOptions?.where,
+      },
     })
 
     // 해당되는 항목이 0개 이상이면 마지막 항목 아니면 null 반환

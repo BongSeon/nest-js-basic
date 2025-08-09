@@ -6,6 +6,7 @@ import { Chat } from '../entities/chat.entity'
 import { PaginateMessageDto } from './dto/paginate-message.dto'
 import { CommonService } from 'src/common/services/common.service'
 import { CreateMessageDto } from './dto/create-messages.dto'
+import { plainToClass } from 'class-transformer'
 
 @Injectable()
 export class MessagesService {
@@ -24,10 +25,12 @@ export class MessagesService {
       content: dto.content,
     })
 
-    return await this.messagesRepository.findOne({
+    const result = await this.messagesRepository.findOne({
       where: { id: message.id },
-      relations: ['chat', 'user'],
+      relations: ['chat', 'user', 'user.profile'],
     })
+
+    return plainToClass(Message, result)
   }
 
   paginateMessages(

@@ -1,8 +1,10 @@
-import { IsNumber } from 'class-validator'
-import { PickType } from '@nestjs/mapped-types'
-import { Message } from '../entities/message.entity'
+import { IsNumber, IsString, MaxLength } from 'class-validator'
 
-export class CreateMessageDto extends PickType(Message, ['content']) {
+export class CreateMessageDto {
   @IsNumber()
   chatId: number
+
+  @IsString()
+  @MaxLength(100)
+  content: string
 }

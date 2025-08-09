@@ -3,6 +3,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm'
+import { Exclude } from 'class-transformer'
 
 export abstract class BaseEntity {
   @PrimaryGeneratedColumn()
@@ -12,5 +13,8 @@ export abstract class BaseEntity {
   createdAt: Date
 
   @UpdateDateColumn()
+  @Exclude({
+    toPlainOnly: true, // 응답 시 제외
+  })
   updatedAt: Date
 }

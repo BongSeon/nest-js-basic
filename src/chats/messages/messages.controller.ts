@@ -28,7 +28,7 @@ export class MessagesController {
             id,
           },
         },
-        relations: ['user'],
+        relations: ['user', 'user.profile'],
       },
       id
     )

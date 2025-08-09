@@ -10,6 +10,10 @@ export enum ChatType {
 
 @Entity()
 export class Chat extends BaseEntity {
+  // 채팅방 제목
+  @Column({ length: 100 })
+  title: string
+
   // 채팅방에 참여한 유저들
   @ManyToMany(() => User, (user) => user.chats)
   users: User[]
