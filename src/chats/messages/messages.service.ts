@@ -30,6 +30,13 @@ export class MessagesService {
       relations: ['chat', 'user', 'user.profile'],
     })
 
+    // password 제거
+    if (result?.user) {
+      delete result.user.password
+      delete result.user.emailVerificationCode
+      delete result.user.emailVerificationExpiresAt
+    }
+
     return plainToClass(Message, result)
   }
 
