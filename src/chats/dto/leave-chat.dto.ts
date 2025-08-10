@@ -1,6 +1,6 @@
 import { IsNumber } from 'class-validator'
 
-export class EnterChatDto {
+export class LeaveChatDto {
   @IsNumber()
   chatId: number
 }

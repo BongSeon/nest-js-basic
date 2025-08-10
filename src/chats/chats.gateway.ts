@@ -19,6 +19,7 @@ import { SocketCatchHttpFilter } from 'src/common/filters/socket-catch-http.filt
 import { User } from 'src/users/entities/user.entity'
 import { CreateChatDto } from './dto/create-chat.dto'
 import { EnterChatDto } from './dto/enter-chat.dto'
+import { LeaveChatDto } from './dto/leave-chat.dto'
 
 @WebSocketGateway({
   // ws://localhost:3000/chats
@@ -36,9 +37,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {}
 
   @WebSocketServer()
-  server: Server // this.server.emit('onMessage', message) 모든 클라이언트에게 메시지 전송
-
-  //authorization
+  server: Server
   async handleConnection(socket: Socket & { user: User }) {
     try {
       const headers = socket.handshake.headers
@@ -46,6 +45,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Bearer <token>
       const rawToken = headers['authorization'] || socket.handshake.auth?.token
       if (!rawToken) {
+        console.log('토큰이 없습니다.')
         socket.disconnect()
         return
       }
@@ -68,8 +68,18 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('Client connected: ', user.id, user.username)
       // 해당 클라이언트에만 메시지 전송
       socket.emit('onConnected', {
-        message: `${user.username}님이 채팅 로비에 들어왔습니다.`,
+        message: `${user.username}님이 채팅에 접속했습니다`,
       })
+
+      // 사용자가 멤버인 방 자동 조인
+      try {
+        const chatIds = await this.chatsService.getUserChatIds(user.id)
+        if (chatIds.length > 0) {
+          socket.join(chatIds.map((id) => id.toString()))
+        }
+      } catch {
+        // 조용히 무시: 자동 조인이 실패해도 연결은 유지
+      }
     } catch (error) {
       console.log(`토큰이 유효하지 않습니다. ${error.message}`)
       socket.disconnect()
@@ -112,19 +122,67 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async enterChat(
     // 방(chat)의 id들을 리스트로 받는다.
     @MessageBody() dto: EnterChatDto,
-    @ConnectedSocket() socket: Socket
+    @ConnectedSocket() socket: Socket & { user: User }
   ) {
-    for (const chatId of dto.chatIds) {
-      const exists = await this.chatsService.checkIfChatExists(chatId)
-      if (!exists) {
-        throw new WsException({
-          code: 100,
-          message: `존재하지 않는 채팅방입니다. chatId: ${chatId}`,
-        })
-      }
+    const exists = await this.chatsService.checkIfChatExists(dto.chatId)
+    if (!exists) {
+      throw new WsException({
+        code: 100,
+        message: `존재하지 않는 채팅방입니다. chatId: ${dto.chatId}`,
+      })
     }
 
-    socket.join(dto.chatIds.map((id) => id.toString()))
+    const chat = await this.chatsService.getChatById(dto.chatId)
+    const isMember = await this.chatsService.isMember(
+      dto.chatId,
+      socket.user.id
+    )
+    const canJoin = isMember || chat.type === 'public'
+    if (!canJoin) {
+      throw new WsException({
+        code: 403,
+        message: `채팅방 입장 권한이 없습니다. chatId: ${dto.chatId}`,
+      })
+    }
+
+    socket.join(dto.chatId.toString())
+
+    // 입장 확인 메시지 전송
+    socket.emit('onEnteredChat', {
+      message: `채팅방에 입장했습니다. chatId: ${dto.chatId}`,
+    })
+  }
+
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    })
+  )
+  @UseFilters(SocketCatchHttpFilter)
+  @SubscribeMessage('leaveChat')
+  async leaveChat(
+    @MessageBody() dto: LeaveChatDto,
+    @ConnectedSocket() socket: Socket & { user: User }
+  ) {
+    const exists = await this.chatsService.checkIfChatExists(dto.chatId)
+    if (!exists) {
+      throw new WsException({
+        code: 100,
+        message: `존재하지 않는 채팅방입니다. chatId: ${dto.chatId}`,
+      })
+    }
+
+    socket.leave(dto.chatId.toString())
+
+    // 나가기 확인 메시지 전송
+    socket.emit('onLeftChat', {
+      message: `채팅방에서 떠났습니다. chatId: ${dto.chatId}`,
+    })
   }
 
   /**
@@ -180,8 +238,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       createdAt: message.createdAt,
     }
 
-    // 나를 제외한 모두에게 보내는 방식
-    socket.to(message.chat.id.toString()).emit('onMessage', response)
+    // 방에 있는 모든 사용자에게 메시지 전송 (자신 포함)
+    this.server.in(message.chat.id.toString()).emit('onMessage', response)
   }
 
   handleDisconnect(socket: Socket) {
