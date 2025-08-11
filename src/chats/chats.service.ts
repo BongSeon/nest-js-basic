@@ -8,6 +8,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { CreateChatDto } from './dto/create-chat.dto'
+import { UserRole } from 'src/users/entities/user.entity'
+import { UserPayload } from 'src/users/types/user-payload.interface'
 import { PaginateChatDto } from './dto/paginate-chat.dto'
 
 @Injectable()
@@ -96,7 +98,16 @@ export class ChatsService {
     return chats.map((c) => Number(c.id))
   }
 
-  async joinChat(chatId: number, userId: number) {
+  async getAllChatIds(): Promise<number[]> {
+    const chats = await this.chatRepository
+      .createQueryBuilder('chat')
+      .select('chat.id', 'id')
+      .getRawMany<{ id: number }>()
+
+    return chats.map((c) => Number(c.id))
+  }
+
+  async joinChat(chatId: number, user: UserPayload) {
     const chat = await this.chatRepository.findOne({
       where: { id: chatId },
       relations: ['users', 'owner'],
@@ -106,27 +117,32 @@ export class ChatsService {
       throw new NotFoundException('채팅방을 찾을 수 없습니다.')
     }
 
+    // ADMIN은 멤버십 기록 없이 접근 가능
+    if (user.role === UserRole.ADMIN) {
+      return this.getChatById(chatId)
+    }
+
     // private 방은 개설자만 추가 가능하도록 제한 (단순 정책)
-    if (chat.type === ChatType.PRIVATE && chat.owner?.id !== userId) {
+    if (chat.type === ChatType.PRIVATE && chat.owner?.id !== user.id) {
       throw new ForbiddenException(
         '비공개 채팅방은 개설자만 멤버를 추가할 수 있습니다.'
       )
     }
 
-    const alreadyMember = chat.users?.some((u) => u.id === userId)
+    const alreadyMember = chat.users?.some((u) => u.id === user.id)
     if (alreadyMember) {
       return this.getChatById(chatId)
     }
 
     const updated = await this.chatRepository.save({
       id: chatId,
-      users: [...(chat.users || []), { id: userId } as any],
+      users: [...(chat.users || []), { id: user.id } as any],
     })
 
     return this.getChatById(updated.id)
   }
 
-  async exitChat(chatId: number, userId: number) {
+  async exitChat(chatId: number, user: UserPayload) {
     const chat = await this.chatRepository.findOne({
       where: { id: chatId },
       relations: ['users'],
@@ -136,7 +152,12 @@ export class ChatsService {
       throw new NotFoundException('채팅방을 찾을 수 없습니다.')
     }
 
-    const users = (chat.users || []).filter((u) => u.id !== userId)
+    // ADMIN은 멤버십 기록이 없으므로 DB 변경 없이 종료
+    if (user.role === UserRole.ADMIN) {
+      return
+    }
+
+    const users = (chat.users || []).filter((u) => u.id !== user.id)
     await this.chatRepository.save({ id: chatId, users: users as any })
   }
 }

@@ -16,7 +16,7 @@ import { CreateMessageDto } from './messages/dto/create-messages.dto'
 import { MessagesService } from './messages/messages.service'
 import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common'
 import { SocketCatchHttpFilter } from 'src/common/filters/socket-catch-http.filter'
-import { User } from 'src/users/entities/user.entity'
+import { User, UserRole } from 'src/users/entities/user.entity'
 import { CreateChatDto } from './dto/create-chat.dto'
 import { EnterChatDto } from './dto/enter-chat.dto'
 import { LeaveChatDto } from './dto/leave-chat.dto'
@@ -68,12 +68,15 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('Client connected: ', user.id, user.username)
       // 해당 클라이언트에만 메시지 전송
       socket.emit('onConnected', {
-        message: `${user.username}님이 채팅에 접속했습니다`,
+        message: `${user.username}님이 챗서비스에 접속했습니다`,
       })
 
-      // 사용자가 멤버인 방 자동 조인
+      // ADMIN: 모든 방에 자동 조인, 일반 사용자: 멤버인 방에 자동 조인
       try {
-        const chatIds = await this.chatsService.getUserChatIds(user.id)
+        const chatIds =
+          user.role === UserRole.ADMIN
+            ? await this.chatsService.getAllChatIds()
+            : await this.chatsService.getUserChatIds(user.id)
         if (chatIds.length > 0) {
           socket.join(chatIds.map((id) => id.toString()))
         }
@@ -137,7 +140,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       dto.chatId,
       socket.user.id
     )
-    const canJoin = isMember || chat.type === 'public'
+    const isAdmin = socket.user.role === UserRole.ADMIN
+    const canJoin = isAdmin || isMember || chat.type === 'public'
     if (!canJoin) {
       throw new WsException({
         code: 403,
