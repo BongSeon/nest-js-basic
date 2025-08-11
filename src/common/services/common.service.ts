@@ -32,13 +32,31 @@ export class CommonService {
   ) {
     const findOptions = this.composeFindOptions<T>(dto)
 
+    // where 조건을 올바르게 결합
+    let finalWhere
+    if (Array.isArray(findOptions.where)) {
+      // findOptions.where가 배열인 경우 (OR 조건들)
+      if (overrideFindOptions?.where) {
+        // overrideFindOptions.where와 각 OR 조건을 결합
+        finalWhere = findOptions.where.map((whereCondition) => ({
+          ...whereCondition,
+          ...overrideFindOptions.where,
+        }))
+      } else {
+        finalWhere = findOptions.where
+      }
+    } else {
+      // findOptions.where가 객체인 경우
+      finalWhere = {
+        ...findOptions.where,
+        ...overrideFindOptions?.where,
+      }
+    }
+
     const [results, count] = await repository.findAndCount({
       ...findOptions,
       ...overrideFindOptions,
-      where: {
-        ...findOptions.where,
-        ...overrideFindOptions?.where,
-      },
+      where: finalWhere,
     })
 
     return {
@@ -139,27 +157,38 @@ export class CommonService {
     for (const [key, value] of Object.entries(dto)) {
       // key -> where__id__greater_than
       // value -> 10
-      if (key.startsWith('where__')) {
+      if (typeof key === 'string' && key.startsWith('where__')) {
         where = { ...where, ...this.parseWhereFilter(key, value) }
-      } else if (key.startsWith('order__')) {
+      } else if (typeof key === 'string' && key.startsWith('order__')) {
         order = { ...order, ...this.parseWhereFilter(key, value) }
       }
     }
 
     // where_or__username__i_like 형식의 필터를 처리
     const whereOptions = { ...where }
+    const orConditions: FindOptionsWhere<T>[] = []
 
     for (const [key, value] of Object.entries(dto)) {
-      if (key.startsWith('or_where__')) {
+      if (typeof key === 'string' && key.startsWith('or_where__')) {
         const parsedFilter = this.parseWhereFilter(
           key.replace('or_', ''),
           value
         ) as FindOptionsWhere<T>
-        if (!Array.isArray(where)) {
-          where = [{ ...whereOptions, ...parsedFilter }]
-        } else {
-          where.push({ ...whereOptions, ...parsedFilter })
-        }
+        orConditions.push({ ...whereOptions, ...parsedFilter })
+      }
+    }
+
+    // OR 조건이 있는 경우 배열로 where 조건을 설정
+    if (orConditions.length > 0) {
+      if (Object.keys(whereOptions).length === 0) {
+        // 기본 where 조건이 없는 경우, OR 조건들만 사용
+        where = orConditions
+      } else {
+        // 기본 where 조건이 있는 경우, 기본 조건과 각 OR 조건을 결합
+        where = orConditions.map((orCondition) => ({
+          ...whereOptions,
+          ...orCondition,
+        }))
       }
     }
 
