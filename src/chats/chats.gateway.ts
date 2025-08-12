@@ -17,7 +17,6 @@ import { MessagesService } from './messages/messages.service'
 import { UseFilters, UsePipes, ValidationPipe } from '@nestjs/common'
 import { SocketCatchHttpFilter } from 'src/common/filters/socket-catch-http.filter'
 import { User, UserRole } from 'src/users/entities/user.entity'
-import { CreateChatDto } from './dto/create-chat.dto'
 import { EnterChatDto } from './dto/enter-chat.dto'
 import { LeaveChatDto } from './dto/leave-chat.dto'
 
@@ -87,27 +86,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log(`토큰이 유효하지 않습니다. ${error.message}`)
       socket.disconnect()
     }
-  }
-
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    })
-  )
-  @UseFilters(SocketCatchHttpFilter)
-  @SubscribeMessage('createChat')
-  async createChat(
-    @MessageBody() dto: CreateChatDto,
-    @ConnectedSocket() socket: Socket & { user: User }
-  ) {
-    const chat = await this.chatsService.createChat(dto, socket.user.id)
-
-    socket.emit('onCreatedChat', chat)
   }
 
   @UsePipes(

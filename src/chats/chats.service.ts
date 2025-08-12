@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { Not, Repository } from 'typeorm'
 import { CreateChatDto } from './dto/create-chat.dto'
 import { UserRole } from 'src/users/entities/user.entity'
 import { UserPayload } from 'src/users/types/user-payload.interface'
@@ -20,11 +20,18 @@ export class ChatsService {
     private readonly commonService: CommonService
   ) {}
 
-  paginateChats(dto: PaginateChatDto) {
+  paginateChats(dto: PaginateChatDto, userId?: number) {
+    let where = dto.type ? { type: dto.type } : { type: Not(ChatType.SUPPORT) }
+
+    if (userId) {
+      where = { ...where, ...{ users: { id: userId } } }
+    }
+
     return this.commonService.paginate(
       dto,
       this.chatRepository,
       {
+        where,
         relations: ['users', 'users.profile', 'owner', 'owner.profile'],
       },
       'chats'

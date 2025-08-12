@@ -25,6 +25,14 @@ export class MessagesService {
       content: dto.content,
     })
 
+    // 채팅방의 마지막 활동 시간으로 updatedAt을 갱신한다
+    await this.chatsRepository
+      .createQueryBuilder()
+      .update(Chat)
+      .set({ updatedAt: () => 'CURRENT_TIMESTAMP(6)' })
+      .where('id = :id', { id: dto.chatId })
+      .execute()
+
     const result = await this.messagesRepository.findOne({
       where: { id: message.id },
       relations: ['chat', 'user', 'user.profile'],

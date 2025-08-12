@@ -6,6 +6,7 @@ import { Message } from '../messages/entities/message.entity'
 export enum ChatType {
   PRIVATE = 'private',
   PUBLIC = 'public',
+  SUPPORT = 'support',
 }
 
 @Entity()
