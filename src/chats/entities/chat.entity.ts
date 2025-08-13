@@ -1,4 +1,11 @@
-import { Column, Entity, ManyToMany, ManyToOne, OneToMany } from 'typeorm'
+import {
+  Column,
+  Entity,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  DeleteDateColumn,
+} from 'typeorm'
 import { BaseEntity } from 'src/common/entities/base.entity'
 import { User } from 'src/users/entities/user.entity'
 import { Message } from '../messages/entities/message.entity'
@@ -33,4 +40,8 @@ export class Chat extends BaseEntity {
     default: ChatType.PRIVATE,
   })
   type: ChatType
+
+  // 소프트 삭제 시각
+  @DeleteDateColumn({ nullable: true })
+  deletedAt?: Date | null
 }

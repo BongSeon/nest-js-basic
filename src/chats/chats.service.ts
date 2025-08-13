@@ -165,6 +165,13 @@ export class ChatsService {
     }
 
     const users = (chat.users || []).filter((u) => u.id !== user.id)
+
+    // 마지막 유저가 나가면 채팅방을 소프트 삭제한다
+    if (users.length === 0) {
+      await this.chatRepository.softDelete(chatId)
+      return
+    }
+
     await this.chatRepository.save({ id: chatId, users: users as any })
   }
 }

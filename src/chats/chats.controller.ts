@@ -15,21 +15,22 @@ import { AccessTokenGuard } from 'src/auth/guards/bearer-token.guard'
 import { User } from 'src/users/decorator/user.decorator'
 import { UserPayload } from 'src/users/types/user-payload.interface'
 import { CreateChatDto } from './dto/create-chat.dto'
-import { ChatType } from './entities/chat.entity'
 
 @Controller('chats')
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}
 
+  // 모든 채팅방 목록 조회
   @Get()
   paginateChats(@Query() dto: PaginateChatDto) {
     return this.chatsService.paginateChats(dto)
   }
 
-  @Get('/support')
+  // 내가 속한 채팅방 목록만 조회
+  @Get('/my')
   @UseGuards(AccessTokenGuard)
-  paginateSupportChats(@User() user: UserPayload) {
-    return this.chatsService.paginateChats({ type: ChatType.SUPPORT }, user.id)
+  paginateMyChats(@Query() dto: PaginateChatDto, @User() user: UserPayload) {
+    return this.chatsService.paginateChats(dto, user.id)
   }
 
   @Get(':id')
