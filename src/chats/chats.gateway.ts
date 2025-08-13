@@ -129,6 +129,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     socket.join(dto.chatId.toString())
 
+    // 입장 시 마지막 읽음 시간 갱신
+    try {
+      await this.chatsService.markChatRead(dto.chatId, socket.user.id)
+    } catch {}
+
     // 입장 확인 메시지 전송
     socket.emit('onEnteredChat', {
       message: `채팅방에 입장했습니다. chatId: ${dto.chatId}`,
@@ -160,6 +165,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     socket.leave(dto.chatId.toString())
+
+    // 나가기 시점에도 현재 시각으로 읽음 갱신 (마지막으로 본 시점 기록)
+    try {
+      await this.chatsService.markChatRead(dto.chatId, socket.user.id)
+    } catch {}
 
     // 나가기 확인 메시지 전송
     socket.emit('onLeftChat', {
@@ -222,6 +232,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // 방에 있는 모든 사용자에게 메시지 전송 (자신 포함)
     this.server.in(message.chat.id.toString()).emit('onMessage', response)
+
+    // 발신자는 이 방을 읽은 것으로 처리
+    try {
+      await this.chatsService.markChatRead(dto.chatId, socket.user.id)
+    } catch {}
   }
 
   handleDisconnect(socket: Socket) {

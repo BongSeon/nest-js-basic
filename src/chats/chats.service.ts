@@ -1,4 +1,6 @@
 import { Chat, ChatType } from './entities/chat.entity'
+import { ChatLastRead } from './entities/chat-last-read.entity'
+import { Message } from './messages/entities/message.entity'
 import { CommonService } from 'src/common/services/common.service'
 import {
   Injectable,
@@ -6,7 +8,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Not, Repository } from 'typeorm'
+import { In, Not, Repository } from 'typeorm'
 import { CreateChatDto } from './dto/create-chat.dto'
 import { UserRole } from 'src/users/entities/user.entity'
 import { UserPayload } from 'src/users/types/user-payload.interface'
@@ -17,17 +19,19 @@ export class ChatsService {
   constructor(
     @InjectRepository(Chat)
     private readonly chatRepository: Repository<Chat>,
+    @InjectRepository(ChatLastRead)
+    private readonly chatLastReadRepository: Repository<ChatLastRead>,
     private readonly commonService: CommonService
   ) {}
 
-  paginateChats(dto: PaginateChatDto, userId?: number) {
+  async paginateChats(dto: PaginateChatDto, userId?: number) {
     let where = dto.type ? { type: dto.type } : { type: Not(ChatType.SUPPORT) }
 
     if (userId) {
       where = { ...where, ...{ users: { id: userId } } }
     }
 
-    return this.commonService.paginate(
+    const result = await this.commonService.paginate(
       dto,
       this.chatRepository,
       {
@@ -36,6 +40,31 @@ export class ChatsService {
       },
       'chats'
     )
+
+    // users: { id: userId } 조건으로 조회 시 users 관계가 1명으로만 채워지는 이슈 보정
+    if (userId && result.items.length > 0) {
+      const ids = result.items.map((c: Chat) => c.id)
+      const fullChats = await this.chatRepository.find({
+        where: { id: In(ids) },
+        relations: ['users', 'users.profile', 'owner', 'owner.profile'],
+      })
+      const fullMap = new Map(fullChats.map((c) => [c.id, c]))
+      result.items = result.items.map((c: Chat) => fullMap.get(c.id) || c)
+    }
+
+    // TODO: 성능 이슈 있을 수 있음, 추후 redis 적용 필요
+    if (dto.withUnreadCount && userId) {
+      const itemsWithUnread = await Promise.all(
+        result.items.map(async (chat: Chat) => {
+          const unreadCount = await this.getUnreadCount(chat.id, userId)
+          return { ...(chat as any), unreadCount }
+        })
+      )
+
+      return { ...result, items: itemsWithUnread }
+    }
+
+    return result
   }
 
   async createChat(dto: CreateChatDto, ownerId: number) {
@@ -75,6 +104,56 @@ export class ChatsService {
     }
 
     return chat
+  }
+
+  /**
+   * 특정 유저의 채팅방 미확인 메시지 개수
+   */
+  async getUnreadCount(chatId: number, userId: number): Promise<number> {
+    // 사용자의 마지막 읽음 시각 조회
+    const lastRead = await this.chatLastReadRepository.findOne({
+      where: { chat: { id: chatId }, user: { id: userId } },
+    })
+
+    // 마지막 읽음이 없다면 방 생성 이후 모든 메시지를 미확인으로 간주
+    const qb = this.chatRepository.manager
+      .getRepository(Message)
+      .createQueryBuilder('message')
+      .innerJoin('message.chat', 'chat')
+      .where('chat.id = :chatId', { chatId })
+
+    if (lastRead?.lastReadAt) {
+      qb.andWhere('message.createdAt > :lastReadAt', {
+        lastReadAt: lastRead.lastReadAt,
+      })
+    }
+
+    // 내가 보낸 메시지는 제외 (이부분은 불필요해서 주석처리 함, 메시지 보내면서 마지막 읽은 시간을 기록하기 때문)
+    // qb.andWhere('message.userId != :userId', { userId })
+
+    const count = await qb.getCount()
+    return count
+  }
+
+  /**
+   * 해당 방을 읽었음을 기록 (지금 시각으로 갱신)
+   */
+  async markChatRead(chatId: number, userId: number): Promise<void> {
+    const existing = await this.chatLastReadRepository.findOne({
+      where: { chat: { id: chatId }, user: { id: userId } },
+    })
+
+    if (existing) {
+      existing.lastReadAt = new Date()
+      await this.chatLastReadRepository.save(existing)
+      return
+    }
+
+    await this.chatLastReadRepository.save({
+      chat: { id: chatId } as any,
+      user: { id: userId } as any,
+      lastReadAt: new Date(),
+    })
   }
 
   async checkIfChatExists(chatId: number) {

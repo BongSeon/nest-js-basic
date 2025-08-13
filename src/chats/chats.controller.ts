@@ -20,21 +20,24 @@ import { CreateChatDto } from './dto/create-chat.dto'
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}
 
-  // 모든 채팅방 목록 조회
-  @Get()
+  // 채팅방 목록 조회 (안 읽은 개수 없이 조회)
+  @Get('/without-unread-count')
   paginateChats(@Query() dto: PaginateChatDto) {
     return this.chatsService.paginateChats(dto)
   }
 
-  // 내가 속한 채팅방 목록만 조회
-  @Get('/my')
+  // 채팅방 목록 조회
+  @Get()
   @UseGuards(AccessTokenGuard)
   paginateMyChats(@Query() dto: PaginateChatDto, @User() user: UserPayload) {
     return this.chatsService.paginateChats(dto, user.id)
   }
 
   @Get(':id')
-  getChatById(@Param('id') id: string) {
+  @UseGuards(AccessTokenGuard)
+  getChatById(@Param('id') id: string, @User() user: UserPayload) {
+    // 상세 조회 시 마지막 읽음 갱신
+    this.chatsService.markChatRead(+id, user.id).catch(() => {})
     return this.chatsService.getChatById(+id)
   }
 
