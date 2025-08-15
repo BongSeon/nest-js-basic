@@ -8,17 +8,31 @@ import { JwtService } from '@nestjs/jwt'
 import { TokenBlacklistService } from '../services/token-blacklist.service'
 import { AuthService } from '../auth.service'
 import { JwtPayload } from '../types/jwt-payload.interface'
+import { Reflector } from '@nestjs/core'
+import { IS_PUBLIC_KEY } from '../decorators/is-public.decorator'
 
 @Injectable()
 export class BearerTokenGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private tokenBlacklistService: TokenBlacklistService,
-    private authService: AuthService
+    private authService: AuthService,
+    private reflector: Reflector
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ])
+
     const request = context.switchToHttp().getRequest()
+
+    if (isPublic) {
+      request.isRoutePublic = true
+
+      return true
+    }
 
     const token = this.authService.extractTokenFromHeader(request, 'Bearer')
 
@@ -61,6 +75,10 @@ export class AccessTokenGuard extends BearerTokenGuard {
 
     const request = context.switchToHttp().getRequest()
 
+    if (request.isRoutePublic) {
+      return true
+    }
+
     if (request.tokenType !== 'access') {
       throw new UnauthorizedException('Token is not an access token')
     }
@@ -75,6 +93,10 @@ export class RefreshTokenGuard extends BearerTokenGuard {
     await super.canActivate(context)
 
     const request = context.switchToHttp().getRequest()
+
+    if (request.isRoutePublic) {
+      return true
+    }
 
     if (request.tokenType !== 'refresh') {
       throw new UnauthorizedException('Token is not a refresh token')

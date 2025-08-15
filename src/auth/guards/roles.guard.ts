@@ -10,7 +10,7 @@ import { JwtPayload } from '../types/jwt-payload.interface'
 import { ROLES_KEY } from '../decorators/roles.decorator'
 
 @Injectable()
-export class RoleGuard implements CanActivate {
+export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {

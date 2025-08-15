@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   ParseIntPipe,
-  UseGuards,
   Query,
   UseInterceptors,
 } from '@nestjs/common'
@@ -15,7 +14,6 @@ import { PostRepliesService } from './post-replies.service'
 import { CreatePostReplyDto } from './dto/create-post-reply.dto'
 import { UpdatePostReplyDto } from './dto/update-post-reply.dto'
 import { PaginatePostReplyDto } from './dto/paginate-post-reply.dto'
-import { AccessTokenGuard } from '../auth/guards/bearer-token.guard'
 import { User } from '../users/decorator/user.decorator'
 import { UserPayload } from '../users/types/user-payload.interface'
 import { TransactionInterceptor } from '../common/interceptors/transaction.interceptor'
@@ -26,8 +24,20 @@ import { QueryRunner as QR } from 'typeorm'
 export class PostRepliesController {
   constructor(private readonly postRepliesService: PostRepliesService) {}
 
+  @Get()
+  async findAllByPost(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Query() paginationDto: PaginatePostReplyDto
+  ) {
+    return this.postRepliesService.findAllByPost(postId, paginationDto)
+  }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.postRepliesService.findOne(id)
+  }
+
   @Post()
-  @UseGuards(AccessTokenGuard)
   @UseInterceptors(TransactionInterceptor)
   async create(
     @Param('postId', ParseIntPipe) postId: number,
@@ -43,23 +53,7 @@ export class PostRepliesController {
     )
   }
 
-  @Get()
-  @UseGuards(AccessTokenGuard)
-  async findAllByPost(
-    @Param('postId', ParseIntPipe) postId: number,
-    @Query() paginationDto: PaginatePostReplyDto
-  ) {
-    return this.postRepliesService.findAllByPost(postId, paginationDto)
-  }
-
-  @Get(':id')
-  @UseGuards(AccessTokenGuard)
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.postRepliesService.findOne(id)
-  }
-
   @Patch(':id')
-  @UseGuards(AccessTokenGuard)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePostReplyDto: UpdatePostReplyDto,
@@ -69,7 +63,6 @@ export class PostRepliesController {
   }
 
   @Delete(':id')
-  @UseGuards(AccessTokenGuard)
   @UseInterceptors(TransactionInterceptor)
   async remove(
     @Param('id', ParseIntPipe) id: number,

@@ -26,8 +26,24 @@ import { QueryRunner as QR } from 'typeorm'
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
-  @Post()
+  @Get()
   @UseGuards(AccessTokenGuard)
+  async getPosts(
+    @Query() paginationDto: GetPostsDto,
+    @User('id') userId: number
+  ): Promise<any> {
+    return await this.postsService.getPosts(paginationDto, userId)
+  }
+
+  @Get(':id')
+  async getPost(
+    @Param('id', ParseIntPipe) id: number,
+    @User('id') userId: number
+  ): Promise<any> {
+    return await this.postsService.getPost(id, userId)
+  }
+
+  @Post()
   @UseInterceptors(TransactionInterceptor)
   async create(
     @User('id') userId: number,
@@ -40,26 +56,7 @@ export class PostsController {
     return this.postsService.getPost(post.id, userId, qr)
   }
 
-  @Get()
-  @UseGuards(AccessTokenGuard)
-  async getPosts(
-    @Query() paginationDto: GetPostsDto,
-    @User('id') userId: number
-  ): Promise<any> {
-    return await this.postsService.getPosts(paginationDto, userId)
-  }
-
-  @Get(':id')
-  @UseGuards(AccessTokenGuard)
-  async getPost(
-    @Param('id', ParseIntPipe) id: number,
-    @User('id') userId: number
-  ): Promise<any> {
-    return await this.postsService.getPost(id, userId)
-  }
-
   @Patch(':id')
-  @UseGuards(AccessTokenGuard)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePostDto: UpdatePostDto,
@@ -70,14 +67,11 @@ export class PostsController {
   }
 
   @Delete(':id')
-  @UseGuards(AccessTokenGuard)
   async remove(
     @Param('id', ParseIntPipe) id: number,
     @User() user: UserPayload
   ): Promise<any> {
     // 삭제 권한 체크용 role을 전달
-    console.log('id', id)
-    console.log('user', user)
     await this.postsService.remove(id, user.id, user.role)
 
     return {
@@ -87,7 +81,6 @@ export class PostsController {
   }
 
   @Post(':id/like')
-  @UseGuards(AccessTokenGuard)
   @UseInterceptors(TransactionInterceptor)
   async likePost(
     @Param('id', ParseIntPipe) postId: number,
@@ -97,7 +90,6 @@ export class PostsController {
   }
 
   @Delete(':id/like')
-  @UseGuards(AccessTokenGuard)
   @UseInterceptors(TransactionInterceptor)
   async unlikePost(
     @Param('id', ParseIntPipe) postId: number,

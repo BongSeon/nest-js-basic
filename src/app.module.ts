@@ -12,8 +12,7 @@ import { Image } from './common/entities/image.entity'
 import { PostReply } from './post-replies/entities/post-reply.entity'
 import { AuthModule } from './auth/auth.module'
 import { CommonModule } from './common/common.module'
-// import { LandingGateway } from './gateway/landing.gateway'
-import { APP_INTERCEPTOR } from '@nestjs/core'
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import {
   ENV_DB_DATABASE_KEY,
   ENV_DB_HOST_KEY,
@@ -25,6 +24,8 @@ import { ChatsModule } from './chats/chats.module'
 import { Chat } from './chats/entities/chat.entity'
 import { Message } from './chats/messages/entities/message.entity'
 import { ChatLastRead } from './chats/entities/chat-last-read.entity'
+import { RolesGuard } from './auth/guards/roles.guard'
+import { AccessTokenGuard } from './auth/guards/bearer-token.guard'
 
 @Module({
   imports: [
@@ -55,6 +56,14 @@ import { ChatLastRead } from './chats/entities/chat-last-read.entity'
     {
       provide: APP_INTERCEPTOR,
       useClass: ClassSerializerInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AccessTokenGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
     // LandingGateway,
   ],

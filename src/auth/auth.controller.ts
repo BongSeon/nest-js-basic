@@ -14,15 +14,13 @@ import { RegisterDto } from './dto/register.dto'
 import { VerifyEmailDto } from './dto/verify-email.dto'
 import { UpdateProfileImageDto } from './dto/update-profile-image.dto'
 import { BasicTokenGuard } from './guards/basic-token.guard'
-import {
-  AccessTokenGuard,
-  RefreshTokenGuard,
-} from './guards/bearer-token.guard'
+import { RefreshTokenGuard } from './guards/bearer-token.guard'
 import { UserPayload } from '../users/types/user-payload.interface'
 import { User as UserDecorator } from '../users/decorator/user.decorator'
 import { MeDto } from '../users/dto/me.dto'
 import { getImageUrl } from '../common/utils/image.util'
 import { ImageType } from '../common/entities/image.entity'
+import { IsPublic } from './decorators/is-public.decorator'
 
 @Controller('auth')
 export class AuthController {
@@ -32,6 +30,7 @@ export class AuthController {
    * 1단계 회원가입: 사용자 정보를 받아서 임시 사용자를 생성하고 인증 코드를 생성
    */
   @Post('register')
+  @IsPublic()
   async register(@Body() registerDto: RegisterDto) {
     return await this.authService.registerWithEmail(registerDto)
   }
@@ -45,19 +44,20 @@ export class AuthController {
    * 2단계 회원가입: 이메일 인증 코드 확인
    */
   @Post('register/verify-code')
+  @IsPublic()
   async registerStep2(@Body() verifyEmailDto: VerifyEmailDto) {
     return await this.authService.registerStep2(verifyEmailDto)
   }
 
   @Post('login')
   @UseGuards(BasicTokenGuard)
+  @IsPublic()
   async login(@Req() request: Request) {
     const { username, password } = request['credentials']
     return await this.authService.loginWithUsername({ username, password })
   }
 
   @Post('logout')
-  @UseGuards(AccessTokenGuard)
   async logout(@Req() request: Request) {
     // Authorization 헤더에서 Bearer 토큰 추출
     const authHeader = request.headers.authorization
@@ -81,7 +81,6 @@ export class AuthController {
   }
 
   @Post('hello')
-  @UseGuards(AccessTokenGuard)
   async hello(@Req() request: Request) {
     // Authorization 헤더에서 Bearer 토큰 추출
     const authHeader = request.headers.authorization
@@ -118,7 +117,6 @@ export class AuthController {
    * 내 정보 조회
    */
   @Get('me')
-  @UseGuards(AccessTokenGuard)
   async getMe(@UserDecorator() user: UserPayload): Promise<MeDto> {
     return await this.authService.getMe(user)
   }
@@ -127,7 +125,6 @@ export class AuthController {
    * 프로필 이미지/커버 이미지 업데이트
    */
   @Post('me/profile')
-  @UseGuards(AccessTokenGuard)
   async updateProfileImage(
     @UserDecorator() user: UserPayload,
     @Body() updateProfileImageDto: UpdateProfileImageDto
@@ -139,7 +136,6 @@ export class AuthController {
   }
 
   @Delete('me/profile')
-  @UseGuards(AccessTokenGuard)
   async deleteProfileImage(@UserDecorator() user: UserPayload) {
     return await this.authService.deleteProfileImage(
       user.id,
@@ -148,7 +144,6 @@ export class AuthController {
   }
 
   @Delete('me/cover')
-  @UseGuards(AccessTokenGuard)
   async deleteCoverImage(@UserDecorator() user: UserPayload) {
     return await this.authService.deleteProfileImage(
       user.id,

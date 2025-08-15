@@ -15,6 +15,7 @@ import { AccessTokenGuard } from 'src/auth/guards/bearer-token.guard'
 import { User } from 'src/users/decorator/user.decorator'
 import { UserPayload } from 'src/users/types/user-payload.interface'
 import { CreateChatDto } from './dto/create-chat.dto'
+import { IsPublic } from 'src/auth/decorators/is-public.decorator'
 
 @Controller('chats')
 export class ChatsController {
@@ -22,6 +23,7 @@ export class ChatsController {
 
   // 채팅방 목록 조회 (안 읽은 개수 없이 조회)
   @Get('/without-unread-count')
+  @IsPublic()
   paginateChats(@Query() dto: PaginateChatDto) {
     return this.chatsService.paginateChats(dto)
   }

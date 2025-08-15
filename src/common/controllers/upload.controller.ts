@@ -3,12 +3,10 @@ import {
   Post,
   UseInterceptors,
   UploadedFile,
-  UseGuards,
   BadRequestException,
   Query,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
-import { AccessTokenGuard } from '../../auth/guards/bearer-token.guard'
 import { S3UploadService } from '../services/s3-upload.service'
 import { S3_TEMP_IMAGE_PATH } from '../const/path.const'
 
@@ -20,7 +18,6 @@ export class UploadController {
    * 이미지 업로드
    */
   @Post('image')
-  @UseGuards(AccessTokenGuard)
   @UseInterceptors(FileInterceptor('image'))
   async uploadImage(
     @UploadedFile() file: Express.Multer.File,
@@ -42,7 +39,6 @@ export class UploadController {
    * 서명된 URL 생성 (클라이언트에서 직접 업로드할 때 사용)
    */
   @Post('presigned-url')
-  @UseGuards(AccessTokenGuard)
   async generatePresignedUrl(
     @Query('fileName') fileName: string,
     @Query('folder') folder: 'profile' | 'posts' = 'posts',
